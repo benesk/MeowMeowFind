@@ -10,14 +10,12 @@
             --text-color: #4a3e3d;
             --border-color: #d1c7bd;
         }
-
         html, body {
             overflow: hidden;
             position: fixed;
             width: 100%;
             height: 100%;
         }
-
         body {
             font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-color);
@@ -33,20 +31,40 @@
             -webkit-user-select: none;
             -webkit-touch-callout: none;
         }
-
-        h1 { margin: 0 0 5px 0; font-size: 1.8rem; }
         
+        .header-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        h1 { margin: 0; font-size: 1.8rem; }
+
+        /* Rules Info Button */
+        .info-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-color);
+            padding: 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+                
         .controls {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             background: rgba(0,0,0,0.03);
             padding: 10px;
             border-radius: 8px;
         }
-
         label { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;}
         select {
             padding: 6px 12px;
@@ -56,22 +74,27 @@
             font-weight: bold;
             font-size: 0.9rem;
         }
-
         .stats {
             display: flex;
             gap: 20px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-weight: bold;
             font-size: 1.2rem;
         }
-
+        #special-banner {
+            font-size: 0.95rem;
+            color: #d9534f;
+            font-weight: bold;
+            margin-bottom: 8px;
+            min-height: 18px;
+            text-align: center;
+        }
         #grid-container {
             padding: 4px;
             background-color: var(--text-color);
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
         }
-
         #grid {
             display: grid;
             gap: 2px;
@@ -82,7 +105,6 @@
             touch-action: none; 
             -webkit-user-select: none;
         }
-
         .cell {
             background-color: white;
             display: flex;
@@ -92,13 +114,11 @@
             -webkit-user-select: none;
             touch-action: none;
         }
-
         .actions-container {
             display: flex;
             gap: 10px;
             margin-top: 15px;
         }
-
         .btn {
             padding: 12px 28px;
             font-size: 1rem;
@@ -112,10 +132,57 @@
             -webkit-tap-highlight-color: transparent;
         }
         .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #4a3e3d; }
-        
+                
         #reviveBtn { background-color: #baffc9; display: none; }
         .message { margin-top: 10px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.1rem; }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #f7f5f0;
+            margin: auto;
+            padding: 20px;
+            border: 3px solid #4a3e3d;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 420px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-align: left;
+        }
+        .modal-content h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .modal-content ul {
+            padding-left: 20px;
+            line-height: 1.5;
+        }
+        .modal-content li {
+            margin-bottom: 8px;
+        }
+        .close-modal-btn {
+            display: block;
+            margin: 15px auto 0 auto;
+            padding: 8px 20px;
+            background-color: #ffb6c1;
+            border: 2px solid #4a3e3d;
+            border-radius: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Color blocks */
         .c-0 { background-color: #ffdfba; }
         .c-1 { background-color: #baffc9; }
         .c-2 { background-color: #bae1ff; }
@@ -131,9 +198,11 @@
     </style>
 </head>
 <body>
-
-    <h1>🐱 MeowMeowFind</h1>
-    
+    <div class="header-container">
+        <h1>🐱 MeowMeowFind</h1>
+        <button class="info-btn" onclick="toggleModal(true)">ⓘ</button>
+    </div>
+        
     <div class="controls">
         <label>Size: 
             <select id="sizeSelect" onchange="startNewGame()">
@@ -151,6 +220,7 @@
         </label>
     </div>
 
+    <div id="special-banner"></div>
     <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
 
     <div id="grid-container"><div id="grid"></div></div>
@@ -159,7 +229,22 @@
 
     <div class="actions-container">
         <button class="btn" onclick="startNewGame()">New Game</button>
-        <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get 3 More ❤️s</button>
+        <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get more ❤️'s</button>
+    </div>
+
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2>Rules & Gameplay</h2>
+            <ul>
+                <li><strong>Objective:</strong> Locate exactly one hidden Cat in every row, column, and color region!</li>
+                <li><strong>Single Tap & Drag:</strong> Quickly paint or erase `✖` marks across rows/columns. It never costs lives!</li>
+                <li><strong>Double Tap:</strong> Drop a Cat (🐱, 😻, 😺, 😽) onto a square. Watch out! Placing a cat in the wrong spot costs one ❤️.</li>
+                <li><strong>Note:</strong> Standard cats cannot touch adjacent neighbors (even diagonally), but *are* allowed to share long-range diagonal lines.</li>
+                <li><strong>Special Wildcard (10% Chance):</strong> In rare games, one full-body Cat (🐈) will appear. **No other cat on the entire board can be on the same row, column, or diagonal line as this specific 🐈.**</li>
+                <li><strong>Revives:</strong> If you run out of lives, you can revive to restore them. You get <strong>unlimited</strong> revives on Easy, up to <strong>2</strong> on Medium, and up to <strong>3</strong> on Hard.</li>
+            </ul>
+            <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
+        </div>
     </div>
 
     <script>
@@ -167,13 +252,24 @@
         let boardLayout = []; 
         let solution = [];     
         let playerBoard = [];  
+        let emojiBoard = []; 
         let lives = 3;
+        let maxLivesForDiff = 3;
         let gameOver = false;
         
         let isDragging = false;
         let dragTargetValue = 1; 
         
-        // Accurate coordinate validation for double-taps
+        // Special mechanic state
+        let diagCatRow = -1;
+        let diagCatCol = -1;
+        let hasDiagonalCat = false;
+
+        const catEmojis = ['🐱', '😻', '😺', '😽'];
+        
+        let reviveCount = 0;
+        let maxRevives = Infinity;
+
         let lastTapTime = 0;
         let lastTapRow = -1;
         let lastTapCol = -1;
@@ -183,25 +279,59 @@
         const heartsElement = document.getElementById('hearts');
         const messageElement = document.getElementById('message');
         const reviveBtn = document.getElementById('reviveBtn');
+        const bannerElement = document.getElementById('special-banner');
 
         window.addEventListener('pointerup', () => { isDragging = false; lastTrackedCell = null; });
         window.addEventListener('pointercancel', () => { isDragging = false; lastTrackedCell = null; });
 
+        function toggleModal(show) {
+            document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
+        }
+
         function startNewGame() {
             gridSize = parseInt(document.getElementById('sizeSelect').value);
+            const diff = document.getElementById('diffSelect').value;
+            
+            if (diff === 'easy') {
+                lives = 3;
+                maxRevives = Infinity;
+            } else if (diff === 'medium') {
+                lives = 4;
+                maxRevives = 2;
+            } else { 
+                lives = 5;
+                maxRevives = 3;
+            }
+            
+            maxLivesForDiff = lives;
+            reviveCount = 0;
             gameOver = false;
-            lives = 3;
             reviveBtn.style.display = 'none'; 
             updateHearts();
             messageElement.textContent = "";
+            bannerElement.textContent = "";
+
+            // Determine if this is a special 10% game
+            hasDiagonalCat = Math.random() < 0.10;
+            diagCatRow = -1;
+            diagCatCol = -1;
 
             generatePuzzle();
             playerBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
+            emojiBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
+            
+            if (gridSize === 12 && diff === 'hard') {
+                applyHardClue();
+            }
+
             renderBoard();
         }
 
         function getMoreLives() {
-            lives = 3;
+            if (reviveCount >= maxRevives) return;
+            
+            lives = maxLivesForDiff;
+            reviveCount++;
             gameOver = false;
             reviveBtn.style.display = 'none';
             messageElement.textContent = "Lives restored! 🐾";
@@ -210,14 +340,74 @@
             renderBoard();
         }
 
+        function applyHardClue() {
+            const colorGroups = {};
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const color = boardLayout[r][c];
+                    if (!colorGroups[color]) colorGroups[color] = [];
+                    colorGroups[color].push({r, c});
+                }
+            }
+
+            const validGroups = Object.keys(colorGroups)
+                .map(key => colorGroups[key])
+                .filter(group => group.length >= 5);
+
+            if (validGroups.length > 0) {
+                const chosenGroup = validGroups[Math.floor(Math.random() * validGroups.length)];
+                const shuffled = chosenGroup.sort(() => Math.random() - 0.5);
+                const emptyTiles = shuffled.filter(tile => !solution[tile.r][tile.c]);
+                const targetCluesCount = Math.floor(chosenGroup.length / 2);
+                
+                for (let i = 0; i < Math.min(targetCluesCount, emptyTiles.length); i++) {
+                    const tile = emptyTiles[i];
+                    playerBoard[tile.r][tile.c] = 1;
+                }
+            }
+        }
+
         function generatePuzzle() {
             solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-            let positions = [];
+            let positions = Array(gridSize).fill(-1); // positions[row] = col
             
+            // Randomly select which row gets the diagonal cat
+            let localDiagRow = hasDiagonalCat ? Math.floor(Math.random() * gridSize) : -1;
+            diagCatRow = localDiagRow;
+
+            if (hasDiagonalCat) {
+                bannerElement.textContent = "🐈 ALERT: A diagonal cat (🐈) is hiding on this board!";
+            }
+
             function isSafe(row, col) {
-                for (let i = 0; i < row; i++) {
-                    let pCol = positions[i];
-                    if (pCol === col || Math.abs(pCol - col) === Math.abs(i - row)) return false;
+                // 1. Column check (no two cats can share a column)
+                for (let r = 0; r < row; r++) {
+                    if (positions[r] === col) return false;
+                }
+
+                // 2. Adjacency Check: Standard cats cannot touch ANY neighbor directly (including diagonal touching)
+                for (let r = 0; r < row; r++) {
+                    let c = positions[r];
+                    if (Math.abs(row - r) === 1 && Math.abs(col - c) <= 1) {
+                        return false;
+                    }
+                }
+
+                // 3. Diagonal Cat constraints
+                if (hasDiagonalCat) {
+                    // If we are placing the diagonal cat itself, it must not share diagonals with ANY other cat
+                    if (row === localDiagRow) {
+                        for (let r = 0; r < row; r++) {
+                            let c = positions[r];
+                            if (Math.abs(row - r) === Math.abs(col - c)) return false;
+                        }
+                    } else {
+                        // If we are placing a standard cat, we must verify it does not block the diagonal cat
+                        if (localDiagRow < row && localDiagRow !== -1) {
+                            let diagCol = positions[localDiagRow];
+                            if (Math.abs(row - localDiagRow) === Math.abs(col - diagCol)) return false;
+                        }
+                    }
                 }
                 return true;
             }
@@ -227,15 +417,20 @@
                 let cols = Array.from({length: gridSize}, (_, i) => i).sort(() => Math.random() - 0.5);
                 for (let col of cols) {
                     if (isSafe(row, col)) {
-                        positions.push(col);
+                        positions[row] = col;
                         if (solve(row + 1)) return true;
-                        positions.pop();
+                        positions[row] = -1;
                     }
                 }
                 return false;
             }
             
             solve(0);
+            
+            if (hasDiagonalCat) {
+                diagCatCol = positions[localDiagRow];
+            }
+
             positions.forEach((col, row) => { solution[row][col] = true; });
 
             boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
@@ -258,9 +453,12 @@
                     dirs.sort(() => Math.random() - 0.5);
 
                     let expanded = false;
+                    let hasEmptyNeighbor = false;
+
                     for (let [dr, dc] of dirs) {
                         let nr = curr.r + dr, nc = curr.c + dc;
                         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && boardLayout[nr][nc] === -1) {
+                            hasEmptyNeighbor = true;
                             if (Math.random() < growthChance) {
                                 boardLayout[nr][nc] = curr.color;
                                 nextQueue.push({r: nr, c: nc, color: curr.color});
@@ -269,7 +467,9 @@
                             }
                         }
                     }
-                    if (!expanded && Math.random() < 0.5) nextQueue.push(curr); 
+                    if (!expanded && hasEmptyNeighbor && Math.random() < 0.5) {
+                        nextQueue.push(curr); 
+                    }
                 }
                 queue = nextQueue;
                 
@@ -314,7 +514,7 @@
                         cell.textContent = '✖'; 
                         cell.style.color = markColor;
                     } else if (playerBoard[r][c] === 2) {
-                        cell.textContent = '🐱';
+                        cell.textContent = emojiBoard[r][c] || '🐱';
                     }
 
                     gridElement.appendChild(cell);
@@ -333,11 +533,9 @@
             let c = parseInt(cell.dataset.col);
             let now = new Date().getTime();
 
-            // Check if within double-tap time limit AND hit the exact same grid coordinate
             if ((now - lastTapTime < 250) && (r === lastTapRow && c === lastTapCol)) {
                 isDragging = false;
                 handleCatPlacement(r, c);
-                // Clear state so a 3rd quick tap doesn't register instantly as another double click
                 lastTapRow = -1;
                 lastTapCol = -1;
             } else {
@@ -345,7 +543,6 @@
                 dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
                 lastTrackedCell = `${r},${c}`;
                 
-                // Track this specific tile position for potential subsequent click checks
                 lastTapRow = r;
                 lastTapCol = c;
                 
@@ -374,6 +571,13 @@
             }
         });
 
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('rulesModal');
+            if (e.target === modal) {
+                toggleModal(false);
+            }
+        });
+
         function applyXMark(r, c) {
             if (playerBoard[r][c] === 2) return; 
             if (playerBoard[r][c] !== dragTargetValue) {
@@ -385,9 +589,18 @@
         function handleCatPlacement(r, c) {
             if (playerBoard[r][c] === 2) {
                 playerBoard[r][c] = 0;
+                emojiBoard[r][c] = '';
             } else {
                 if (solution[r][c]) {
                     playerBoard[r][c] = 2;
+                    
+                    // Assign full body cat if this is the special diagonal cat spot, otherwise a face
+                    if (hasDiagonalCat && r === diagCatRow && c === diagCatCol) {
+                        emojiBoard[r][c] = '🐈';
+                    } else {
+                        emojiBoard[r][c] = catEmojis[Math.floor(Math.random() * catEmojis.length)];
+                    }
+                    
                     checkWin();
                 } else {
                     lives--;
@@ -397,7 +610,9 @@
                     if (lives <= 0) {
                         gameOver = true;
                         messageElement.textContent = "Game Over! 😿";
-                        reviveBtn.style.display = 'inline-block';
+                        if (reviveCount < maxRevives) {
+                            reviveBtn.style.display = 'inline-block';
+                        }
                     }
                 }
             }
@@ -405,7 +620,7 @@
         }
 
         function updateHearts() {
-            heartsElement.textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(Math.max(0, 3 - lives));
+            heartsElement.textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(Math.max(0, maxLivesForDiff - lives));
         }
 
         function checkWin() {
