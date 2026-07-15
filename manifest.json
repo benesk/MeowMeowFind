@@ -1,0 +1,10 @@
+{
+  "name": "MeowMeowFind",
+  "short_name": "MeowFind",
+  "start_url": "/MeowMeowFind/index.html",
+  "scope": "/MeowMeowFind/",
+  "display": "standalone",
+  "background_color": "#f7f5f0",
+  "theme_color": "#ffb6c1",
+  "orientation": "portrait"
+}
