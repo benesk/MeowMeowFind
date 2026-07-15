@@ -15,6 +15,9 @@
             position: fixed;
             width: 100%;
             height: 100%;
+            /* Force iOS to stop bouncing entirely */
+            overscroll-behavior: none; 
+            -webkit-overflow-scrolling: auto;
         }
         body {
             font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
@@ -30,6 +33,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
+            touch-action: none; /* Block browser gestures completely */
         }
         
         .header-container {
@@ -94,6 +98,8 @@
             background-color: var(--text-color);
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            /* Prevent dynamic cell recalculations from blowing up the container sizing */
+            contain: layout paint; 
         }
         #grid {
             display: grid;
@@ -113,6 +119,11 @@
             font-weight: bold;
             -webkit-user-select: none;
             touch-action: none;
+            /* CRITICAL FIX FOR IOS CELL SIZING */
+            aspect-ratio: 1 / 1; 
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
         }
         .actions-container {
             display: flex;
@@ -260,7 +271,6 @@
         let isDragging = false;
         let dragTargetValue = 1; 
         
-        // Special mechanic state
         let diagCatRow = -1;
         let diagCatCol = -1;
         let hasDiagonalCat = false;
@@ -280,6 +290,19 @@
         const messageElement = document.getElementById('message');
         const reviveBtn = document.getElementById('reviveBtn');
         const bannerElement = document.getElementById('special-banner');
+
+        // CRITICAL FIX FOR IOS SCREEN SCROLLING
+        // Intercept touch movements at the document root to prevent mobile safari body bounce
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // Ensure elements inside our controls or modal are still allowed to register interaction normally
+        document.querySelectorAll('select, button, .modal-content').forEach(element => {
+            element.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+        });
 
         window.addEventListener('pointerup', () => { isDragging = false; lastTrackedCell = null; });
         window.addEventListener('pointercancel', () => { isDragging = false; lastTrackedCell = null; });
@@ -311,7 +334,6 @@
             messageElement.textContent = "";
             bannerElement.textContent = "";
 
-            // Determine if this is a special 10% game
             hasDiagonalCat = Math.random() < 0.10;
             diagCatRow = -1;
             diagCatCol = -1;
@@ -369,9 +391,8 @@
 
         function generatePuzzle() {
             solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-            let positions = Array(gridSize).fill(-1); // positions[row] = col
+            let positions = Array(gridSize).fill(-1); 
             
-            // Randomly select which row gets the diagonal cat
             let localDiagRow = hasDiagonalCat ? Math.floor(Math.random() * gridSize) : -1;
             diagCatRow = localDiagRow;
 
@@ -380,12 +401,10 @@
             }
 
             function isSafe(row, col) {
-                // 1. Column check (no two cats can share a column)
                 for (let r = 0; r < row; r++) {
                     if (positions[r] === col) return false;
                 }
 
-                // 2. Adjacency Check: Standard cats cannot touch ANY neighbor directly (including diagonal touching)
                 for (let r = 0; r < row; r++) {
                     let c = positions[r];
                     if (Math.abs(row - r) === 1 && Math.abs(col - c) <= 1) {
@@ -393,16 +412,13 @@
                     }
                 }
 
-                // 3. Diagonal Cat constraints
                 if (hasDiagonalCat) {
-                    // If we are placing the diagonal cat itself, it must not share diagonals with ANY other cat
                     if (row === localDiagRow) {
                         for (let r = 0; r < row; r++) {
                             let c = positions[r];
                             if (Math.abs(row - r) === Math.abs(col - c)) return false;
                         }
                     } else {
-                        // If we are placing a standard cat, we must verify it does not block the diagonal cat
                         if (localDiagRow < row && localDiagRow !== -1) {
                             let diagCol = positions[localDiagRow];
                             if (Math.abs(row - localDiagRow) === Math.abs(col - diagCol)) return false;
@@ -594,7 +610,6 @@
                 if (solution[r][c]) {
                     playerBoard[r][c] = 2;
                     
-                    // Assign full body cat if this is the special diagonal cat spot, otherwise a face
                     if (hasDiagonalCat && r === diagCatRow && c === diagCatCol) {
                         emojiBoard[r][c] = '🐈';
                     } else {
