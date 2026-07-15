@@ -4,7 +4,9 @@ const GHPATH = '/MeowMeowFind';
 const ASSETS = [
   `${GHPATH}/`,
   `${GHPATH}/index.html`,
-  `${GHPATH}/manifest.json`
+  `${GHPATH}/manifest.json`,
+  `${GHPATH}/icon-192.png`,
+  `${GHPATH}/icon-512.png`
 ];
 
 // Install Service Worker and cache the game files
