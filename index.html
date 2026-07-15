@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>MeowMeowFind</title>
+    <style>
+        :root {
+            --bg-color: #f7f5f0;
+            --text-color: #4a3e3d;
+            --border-color: #d1c7bd;
+        }
+
+        html, body {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        h1 { margin: 0 0 5px 0; font-size: 1.8rem; }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+            background: rgba(0,0,0,0.03);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        label { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;}
+        select {
+            padding: 6px 12px;
+            border-radius: 5px;
+            border: 2px solid var(--text-color);
+            background: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        #grid-container {
+            padding: 4px;
+            background-color: var(--text-color);
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        #grid {
+            display: grid;
+            gap: 2px;
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 460px;
+            max-height: 460px;
+            touch-action: none; 
+            -webkit-user-select: none;
+        }
+
+        .cell {
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .actions-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            background-color: #ffb6c1;
+            color: #4a3e3d;
+            border: 2px solid #4a3e3d;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #4a3e3d;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #4a3e3d; }
+        
+        #reviveBtn { background-color: #baffc9; display: none; }
+        .message { margin-top: 10px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.1rem; }
+
+        .c-0 { background-color: #ffdfba; }
+        .c-1 { background-color: #baffc9; }
+        .c-2 { background-color: #bae1ff; }
+        .c-3 { background-color: #e8bae7; }
+        .c-4 { background-color: #ffffba; }
+        .c-5 { background-color: #ffb3ba; }
+        .c-6 { background-color: #c9c9ff; }
+        .c-7 { background-color: #cefffa; }
+        .c-8 { background-color: #e2f0cb; }
+        .c-9 { background-color: #ffc6ff; }
+        .c-10 { background-color: #eabfff; }
+        .c-11 { background-color: #ffd3b6; }
+    </style>
+</head>
+<body>
+
+    <h1>🐱 MeowMeowFind</h1>
+    
+    <div class="controls">
+        <label>Size: 
+            <select id="sizeSelect" onchange="startNewGame()">
+                <option value="5">5 x 5</option>
+                <option value="8" selected>8 x 8</option>
+                <option value="12">12 x 12</option>
+            </select>
+        </label>
+        <label>Difficulty: 
+            <select id="diffSelect" onchange="startNewGame()">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
+
+    <div id="grid-container"><div id="grid"></div></div>
+
+    <div id="message" class="message"></div>
+
+    <div class="actions-container">
+        <button class="btn" onclick="startNewGame()">New Game</button>
+        <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get 3 More ❤️s</button>
+    </div>
+
+    <script>
+        let gridSize = 8;
+        let boardLayout = []; 
+        let solution = [];     
+        let playerBoard = [];  
+        let lives = 3;
+        let gameOver = false;
+        
+        let isDragging = false;
+        let dragTargetValue = 1; 
+        
+        // Accurate coordinate validation for double-taps
+        let lastTapTime = 0;
+        let lastTapRow = -1;
+        let lastTapCol = -1;
+        let lastTrackedCell = null;
+
+        const gridElement = document.getElementById('grid');
+        const heartsElement = document.getElementById('hearts');
+        const messageElement = document.getElementById('message');
+        const reviveBtn = document.getElementById('reviveBtn');
+
+        window.addEventListener('pointerup', () => { isDragging = false; lastTrackedCell = null; });
+        window.addEventListener('pointercancel', () => { isDragging = false; lastTrackedCell = null; });
+
+        function startNewGame() {
+            gridSize = parseInt(document.getElementById('sizeSelect').value);
+            gameOver = false;
+            lives = 3;
+            reviveBtn.style.display = 'none'; 
+            updateHearts();
+            messageElement.textContent = "";
+
+            generatePuzzle();
+            playerBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
+            renderBoard();
+        }
+
+        function getMoreLives() {
+            lives = 3;
+            gameOver = false;
+            reviveBtn.style.display = 'none';
+            messageElement.textContent = "Lives restored! 🐾";
+            messageElement.style.color = "var(--text-color)";
+            updateHearts();
+            renderBoard();
+        }
+
+        function generatePuzzle() {
+            solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
+            let positions = [];
+            
+            function isSafe(row, col) {
+                for (let i = 0; i < row; i++) {
+                    let pCol = positions[i];
+                    if (pCol === col || Math.abs(pCol - col) === Math.abs(i - row)) return false;
+                }
+                return true;
+            }
+
+            function solve(row) {
+                if (row === gridSize) return true;
+                let cols = Array.from({length: gridSize}, (_, i) => i).sort(() => Math.random() - 0.5);
+                for (let col of cols) {
+                    if (isSafe(row, col)) {
+                        positions.push(col);
+                        if (solve(row + 1)) return true;
+                        positions.pop();
+                    }
+                }
+                return false;
+            }
+            
+            solve(0);
+            positions.forEach((col, row) => { solution[row][col] = true; });
+
+            boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
+            let queue = [];
+            
+            positions.forEach((col, row) => {
+                boardLayout[row][col] = row; 
+                queue.push({r: row, c: col, color: row});
+            });
+
+            const diff = document.getElementById('diffSelect').value;
+            const growthChance = diff === 'easy' ? 0.95 : (diff === 'medium' ? 0.75 : 0.45);
+
+            queue.sort(() => Math.random() - 0.5);
+            while (queue.length > 0) {
+                let nextQueue = [];
+                for (let curr of queue) {
+                    let dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+                    if (diff === 'hard') dirs.push([-1,-1], [-1,1], [1,-1], [1,1]); 
+                    dirs.sort(() => Math.random() - 0.5);
+
+                    let expanded = false;
+                    for (let [dr, dc] of dirs) {
+                        let nr = curr.r + dr, nc = curr.c + dc;
+                        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && boardLayout[nr][nc] === -1) {
+                            if (Math.random() < growthChance) {
+                                boardLayout[nr][nc] = curr.color;
+                                nextQueue.push({r: nr, c: nc, color: curr.color});
+                                expanded = true;
+                                if (diff === 'easy') break; 
+                            }
+                        }
+                    }
+                    if (!expanded && Math.random() < 0.5) nextQueue.push(curr); 
+                }
+                queue = nextQueue;
+                
+                if (queue.length === 0) {
+                    for (let r = 0; r < gridSize; r++) {
+                        for (let c = 0; c < gridSize; c++) {
+                            if (boardLayout[r][c] === -1) {
+                                let neighbors = [[-1,0],[1,0],[0,-1],[0,1]]
+                                    .map(([dr,dc]) => (boardLayout[r+dr] || [])[c+dc])
+                                    .filter(v => v !== undefined && v !== -1);
+                                if (neighbors.length > 0) {
+                                    boardLayout[r][c] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                                } else {
+                                    boardLayout[r][c] = Math.floor(Math.random() * gridSize);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function renderBoard() {
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridElement.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+
+            let fontStyle = '1.3rem';
+            let markColor = 'rgba(74, 62, 61, 0.6)';
+            if (gridSize === 5) { fontStyle = '2.4rem'; }
+            else if (gridSize === 8) { fontStyle = '1.7rem'; }
+
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', `c-${boardLayout[r][c]}`);
+                    cell.style.fontSize = fontStyle;
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
+                    if (playerBoard[r][c] === 1) {
+                        cell.textContent = '✖'; 
+                        cell.style.color = markColor;
+                    } else if (playerBoard[r][c] === 2) {
+                        cell.textContent = '🐱';
+                    }
+
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        gridElement.addEventListener('pointerdown', (e) => {
+            if (gameOver) return;
+            e.preventDefault();
+            
+            let cell = e.target.closest('.cell');
+            if (!cell) return;
+            
+            let r = parseInt(cell.dataset.row);
+            let c = parseInt(cell.dataset.col);
+            let now = new Date().getTime();
+
+            // Check if within double-tap time limit AND hit the exact same grid coordinate
+            if ((now - lastTapTime < 250) && (r === lastTapRow && c === lastTapCol)) {
+                isDragging = false;
+                handleCatPlacement(r, c);
+                // Clear state so a 3rd quick tap doesn't register instantly as another double click
+                lastTapRow = -1;
+                lastTapCol = -1;
+            } else {
+                isDragging = true;
+                dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
+                lastTrackedCell = `${r},${c}`;
+                
+                // Track this specific tile position for potential subsequent click checks
+                lastTapRow = r;
+                lastTapCol = c;
+                
+                applyXMark(r, c);
+            }
+            lastTapTime = now;
+        });
+
+        gridElement.addEventListener('pointermove', (e) => {
+            if (!isDragging || gameOver) return;
+            e.preventDefault();
+            
+            let target = document.elementFromPoint(e.clientX, e.clientY);
+            if (!target) return;
+            
+            let cell = target.closest('.cell');
+            if (!cell) return;
+            
+            let r = parseInt(cell.dataset.row);
+            let c = parseInt(cell.dataset.col);
+            let currentCellKey = `${r},${c}`;
+
+            if (currentCellKey !== lastTrackedCell) {
+                lastTrackedCell = currentCellKey;
+                applyXMark(r, c);
+            }
+        });
+
+        function applyXMark(r, c) {
+            if (playerBoard[r][c] === 2) return; 
+            if (playerBoard[r][c] !== dragTargetValue) {
+                playerBoard[r][c] = dragTargetValue;
+                renderBoard();
+            }
+        }
+
+        function handleCatPlacement(r, c) {
+            if (playerBoard[r][c] === 2) {
+                playerBoard[r][c] = 0;
+            } else {
+                if (solution[r][c]) {
+                    playerBoard[r][c] = 2;
+                    checkWin();
+                } else {
+                    lives--;
+                    updateHearts();
+                    messageElement.textContent = "Oops! Not there. 🐾";
+                    messageElement.style.color = "red";
+                    if (lives <= 0) {
+                        gameOver = true;
+                        messageElement.textContent = "Game Over! 😿";
+                        reviveBtn.style.display = 'inline-block';
+                    }
+                }
+            }
+            renderBoard();
+        }
+
+        function updateHearts() {
+            heartsElement.textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(Math.max(0, 3 - lives));
+        }
+
+        function checkWin() {
+            let catCount = 0;
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    if (playerBoard[r][c] === 2) catCount++;
+                }
+            }
+            if (catCount === gridSize) {
+                gameOver = true;
+                messageElement.textContent = "Purr-fect! Level Cleared! 🎉🐾";
+                messageElement.style.color = "green";
+                reviveBtn.style.display = 'none';
+            }
+        }
+
+        startNewGame();
+    </script>
+</body>
+</html>
