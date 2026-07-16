@@ -1,297 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no">
-    <title>MeowMeowFind</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="/MeowMeowFind/icon-192.png">
-    <style>
-        :root {
-            --bg-color: #f7f5f0;
-            --text-color: #4a3e3d;
-            --border-color: #d1c7bd;
-        }
-        
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-        }
-
-        .wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        
-        .header-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 5px;
-        }
-
-        h1 { margin: 0; font-size: 1.8rem; }
-
-        .info-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--text-color);
-            padding: 0 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-tap-highlight-color: transparent;
-        }
-                
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 8px;
-            background: rgba(0,0,0,0.03);
-            padding: 8px;
-            border-radius: 8px;
-        }
-        label { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;}
-        select {
-            padding: 6px 12px;
-            border-radius: 5px;
-            border: 2px solid var(--text-color);
-            background: white;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 8px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            align-items: center;
-        }
-        #special-banner {
-            font-size: 0.95rem;
-            color: #d9534f;
-            font-weight: bold;
-            margin-bottom: 6px;
-            min-height: 18px;
-            text-align: center;
-        }
-
-        #grid-container {
-            padding: 4px;
-            background-color: var(--text-color);
-            border-radius: 8px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-            margin: 0 auto;
-        }
-
-        #grid {
-            display: grid;
-            gap: 2px;
-            touch-action: pan-x pan-y pinch-zoom; 
-        }
-
-        @media (orientation: portrait) {
-            #grid {
-                width: 86vw;
-                height: 86vw;
-                max-width: 500px;
-                max-height: 500px;
-            }
-        }
-
-        @media (orientation: landscape) {
-            #grid {
-                width: 58vh;
-                height: 58vh;
-                max-width: 400px;
-                max-height: 400px;
-            }
-            .wrapper { padding: 5px; }
-            h1 { font-size: 1.4rem; }
-            .controls { margin-bottom: 4px; padding: 4px 8px; }
-        }
-
-        .cell {
-            background-color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            aspect-ratio: 1 / 1; 
-            min-width: 0;
-            min-height: 0;
-            overflow: hidden;
-            touch-action: manipulation; 
-            transition: background-color 0.2s ease, transform 0.1s ease;
-        }
-
-        .cell:active {
-            transform: scale(0.95);
-        }
-
-        .hint-cat { background-color: #a8f5ba !important; animation: flash 0.5s alternate infinite; }
-        .hint-x { background-color: #fef0ad !important; animation: flash 0.5s alternate infinite; }
-
-        @keyframes flash {
-            from { filter: brightness(1); }
-            to { filter: brightness(0.85); }
-        }
-
-        .actions-container {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-            margin-bottom: 20px;
-            width: 100%;
-            justify-content: center;
-        }
-        .btn {
-            padding: 10px 24px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            background-color: #ffb6c1;
-            color: #4a3e3d;
-            border: 2px solid #4a3e3d;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #4a3e3d;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #4a3e3d; }
-        .btn:disabled {
-            background-color: #d1c7bd;
-            color: #8c827a;
-            box-shadow: 0 4px 0 #8c827a;
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-        }
-                
-        #reviveBtn { background-color: #baffc9; display: none; }
-        .message { margin-top: 8px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.05rem; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #f7f5f0;
-            margin: auto;
-            padding: 20px;
-            border: 3px solid #4a3e3d;
-            border-radius: 15px;
-            width: 85%;
-            max-width: 420px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            text-align: left;
-        }
-        .modal-content h2 { margin-top: 0; text-align: center; }
-        .modal-content ul { padding-left: 20px; line-height: 1.5; }
-        .modal-content li { margin-bottom: 8px; }
-        .close-modal-btn {
-            display: block;
-            margin: 15px auto 0 auto;
-            padding: 8px 20px;
-            background-color: #ffb6c1;
-            border: 2px solid #4a3e3d;
-            border-radius: 15px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .c-0 { background-color: #ffdfba; }
-        .c-1 { background-color: #baffc9; }
-        .c-2 { background-color: #bae1ff; }
-        .c-3 { background-color: #e8bae7; }
-        .c-4 { background-color: #ffffba; }
-        .c-5 { background-color: #ffb3ba; }
-        .c-6 { background-color: #c9c9ff; }
-        .c-7 { background-color: #cefffa; }
-        .c-8 { background-color: #e2f0cb; }
-        .c-9 { background-color: #ffc6ff; }
-        .c-10 { background-color: #eabfff; }
-        .c-11 { background-color: #ffd3b6; }
-    </style>
-</head>
-<body>
-    <div class="wrapper">
-        <div class="header-container">
-            <h1>🐱 MeowMeowFind</h1>
-            <button class="info-btn" onclick="toggleModal(true)">ⓘ</button>
-        </div>
-            
-        <div class="controls">
-            <label>Size: 
-                <select id="sizeSelect" onchange="startNewGame()">
-                    <option value="5">5 x 5</option>
-                    <option value="8" selected>8 x 8</option>
-                    <option value="12">12 x 12</option>
-                </select>
-            </label>
-            <label>Difficulty: 
-                <select id="diffSelect" onchange="startNewGame()">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                </select>
-            </label>
-        </div>
-
-        <div id="special-banner"></div>
-        <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
-
-        <div id="grid-container"><div id="grid"></div></div>
-
-        <div id="message" class="message"></div>
-
-        <div class="actions-container">
-            <button class="btn" onclick="startNewGame()">New Game</button>
-            <button id="hintBtn" class="btn" onclick="triggerLogicalHint()">Hint</button>
-            <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get more ❤️'s</button>
-        </div>
-    </div>
-
-    <div id="rulesModal" class="modal">
-        <div class="modal-content">
-            <h2>Rules & Controls</h2>
-            <ul>
-                <li><strong>Objective:</strong> Find exactly one hidden Cat in every row, column, and color territory!</li>
-                <li><strong>Single Tap:</strong> Tap any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. Drag smoothly to mass-clear zones.</li>
-                <li><strong>Long Press (Hold):</strong> Keep your finger pressed down on a cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
-                <li><strong>iOS Zooming:</strong> Use two-finger screen pinches to scale up and pan the board freely. Double tapping has been safely disabled.</li>
-                <li><strong>Recharging Hints:</strong> Hints require regular valid moves to charge back up. Easy requires 3 moves, Medium requires 7, and Hard requires 12!</li>
-            </ul>
-            <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
-        </div>
-    </div>
-
-    <script>
         let gridSize = 8;
         let boardLayout = []; 
         let solution = [];     
@@ -314,9 +20,12 @@
         let maxRevives = Infinity;
         let lastTrackedCell = null;
 
-        // Long Press States
+        // Long Press and Swipe Separation Coordinates
         let longPressTimer = null;
         let longPressTriggered = false;
+        let startX = 0;
+        let startY = 0;
+        const SWIPE_THRESHOLD = 8; // Pixel radius allowed before discarding long-press
         const LONG_PRESS_DURATION = 350; 
 
         let movesSinceLastHint = 0; 
@@ -764,33 +473,41 @@
             longPressTriggered = false;
             cancelLongPress();
 
+            // Store spatial anchors for drag detection
+            startX = e.clientX;
+            startY = e.clientY;
+
             longPressTimer = setTimeout(() => {
                 longPressTriggered = true;
                 if ('vibrate' in navigator) navigator.vibrate(40);
                 handleCatPlacement(r, c);
             }, LONG_PRESS_DURATION);
 
+            // Fix: Immediately calculate initial intent and paint the starting tile
             isDragging = true;
             dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
             lastTrackedCell = `${r},${c}`;
+            applyXMark(r, c);
         }
 
         function handleInteractionEnd(e) {
             cancelLongPress();
-            if (gameOver || longPressTriggered || !e.isPrimary) return;
-
-            let cell = e.target.closest('.cell');
-            if (!cell) return;
-            
-            let r = parseInt(cell.dataset.row);
-            let c = parseInt(cell.dataset.col);
-
-            applyXMark(r, c);
+            isDragging = false;
+            lastTrackedCell = null;
         }
 
         function handleMoveDrag(e) {
             if (!isDragging || gameOver || !e.isPrimary) return;
             
+            // Check distance delta from pointer start coordinates
+            let deltaX = Math.abs(e.clientX - startX);
+            let deltaY = Math.abs(e.clientY - startY);
+            
+            // Fix: Cancel long press immediately if user moves their finger outside the threshold
+            if (deltaX > SWIPE_THRESHOLD || deltaY > SWIPE_THRESHOLD) {
+                cancelLongPress();
+            }
+
             let target = document.elementFromPoint(e.clientX, e.clientY);
             if (!target) return;
             
@@ -802,7 +519,6 @@
             let currentCellKey = `${r},${c}`;
 
             if (currentCellKey !== lastTrackedCell) {
-                cancelLongPress(); 
                 lastTrackedCell = currentCellKey;
                 applyXMark(r, c);
             }
@@ -879,6 +595,3 @@
                 .then(() => console.log('Offline PWA active! 🐾'))
                 .catch(err => console.log('Service worker error:', err));
         }
-    </script>
-</body>
-</html>
