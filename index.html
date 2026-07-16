@@ -34,7 +34,9 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: none;
+            
+            /* CRITICAL FIX: Blocks double-tap to zoom across the entire viewport framework */
+            touch-action: manipulation; 
         }
         
         .header-container {
@@ -107,8 +109,8 @@
             height: 80vmin;
             max-width: 460px;
             max-height: 460px;
-            touch-action: none; 
             -webkit-user-select: none;
+            touch-action: manipulation;
         }
         .cell {
             background-color: white;
@@ -117,7 +119,10 @@
             justify-content: center;
             font-weight: bold;
             -webkit-user-select: none;
-            touch-action: none;
+            
+            /* CRITICAL FIX: Blocks mobile double-tap to zoom inside individual grid nodes */
+            touch-action: manipulation; 
+            
             aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
@@ -383,7 +388,6 @@
             }
         }
 
-        /* GUARANTEED LOGICAL GENERATION ENGINE */
         function generateSolvablePuzzle(diff) {
             let attempts = 0;
             const maxAttempts = 1000;
@@ -392,19 +396,15 @@
                 attempts++;
                 generateCandidatePuzzle();
                 
-                // Solve via deduction loop
                 const solverResult = solveUsingLogicOnly();
                 if (solverResult.solvable) {
                     const movesCount = solverResult.moves;
-                    // Filter by difficulty tier based on deduction steps
                     if (diff === 'easy' && movesCount > gridSize * 1.5) continue;
                     if (diff === 'hard' && movesCount < gridSize * 1.2) continue;
                     
-                    return; // Successfully found and locked down an appropriate, guess-free puzzle!
+                    return; 
                 }
             }
-            
-            // Fallback safety if the thresholds are too strict
             generateCandidatePuzzle();
         }
 
@@ -468,7 +468,6 @@
 
             positions.forEach((col, row) => { solution[row][col] = true; });
 
-            // REGION GENERATION: Compact local gravity clustering
             boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
             let seeds = [];
             positions.forEach((col, row) => {
@@ -503,7 +502,6 @@
                 queue = nextQueue;
             }
 
-            // Cleanup isolated unassigned cells
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
                     if (boardLayout[r][c] === -1) {
@@ -516,14 +514,8 @@
             }
         }
 
-        /* 
-           HUMAN-LOGIC PUZZLE SOLVER ENGINE
-           Simulates clean, non-backtracking logical deductions. 
-        */
         function solveUsingLogicOnly() {
-            // Setup Solver State: 0 = Unknown, 1 = Excluded (✖), 2 = Placed Cat (🐱)
             let solverBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
-            let solved = false;
             let movesCount = 0;
             let iterations = 0;
             const maxIterations = gridSize * gridSize;
@@ -532,18 +524,16 @@
                 iterations++;
                 let progressMade = false;
 
-                // Rule 1: Eliminate surrounding cells of confirmed Cats
                 for (let r = 0; r < gridSize; r++) {
                     for (let c = 0; c < gridSize; c++) {
                         if (solverBoard[r][c] === 2) {
                             let touchDirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-                            // Special rule handling for Diagonal Wildcard Cat
                             let isDiagCat = (hasDiagonalCat && r === diagCatRow && c === diagCatCol);
                             
                             for (let [dr, dc] of touchDirs) {
                                 let nr = r + dr, nc = c + dc;
                                 if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && solverBoard[nr][nc] === 0) {
-                                    solverBoard[nr][nc] = 1; // Mark adjacent touches as ✖
+                                    solverBoard[nr][nc] = 1; 
                                     progressMade = true;
                                 }
                             }
@@ -564,9 +554,6 @@
                     }
                 }
 
-                // Rule 2: If a group (row, col, color) has exactly ONE remaining unexcluded square, place Cat
-                
-                // Rows
                 for (let r = 0; r < gridSize; r++) {
                     let cats = 0, open = [];
                     for (let c = 0; c < gridSize; c++) {
@@ -584,7 +571,6 @@
                     }
                 }
 
-                // Columns
                 for (let c = 0; c < gridSize; c++) {
                     let cats = 0, open = [];
                     for (let r = 0; r < gridSize; r++) {
@@ -602,7 +588,6 @@
                     }
                 }
 
-                // Color regions
                 for (let color = 0; color < gridSize; color++) {
                     let cats = 0, open = [];
                     for (let r = 0; r < gridSize; r++) {
@@ -627,7 +612,6 @@
                 if (!progressMade) break; 
             }
 
-            // Verify if the Board is Fully Solved
             let catCount = 0;
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
