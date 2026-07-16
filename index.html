@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="/MeowMeowFind/icon-192.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>MeowMeowFind</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="/MeowMeowFind/icon-192.png">
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -17,7 +17,6 @@
             position: fixed;
             width: 100%;
             height: 100%;
-            /* Force iOS to stop bouncing entirely */
             overscroll-behavior: none; 
             -webkit-overflow-scrolling: auto;
         }
@@ -35,7 +34,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: none; /* Block browser gestures completely */
+            touch-action: none;
         }
         
         .header-container {
@@ -47,7 +46,6 @@
 
         h1 { margin: 0; font-size: 1.8rem; }
 
-        /* Rules Info Button */
         .info-btn {
             background: none;
             border: none;
@@ -100,7 +98,6 @@
             background-color: var(--text-color);
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-            /* Prevent dynamic cell recalculations from blowing up the container sizing */
             contain: layout paint; 
         }
         #grid {
@@ -121,7 +118,6 @@
             font-weight: bold;
             -webkit-user-select: none;
             touch-action: none;
-            /* CRITICAL FIX FOR IOS CELL SIZING */
             aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
@@ -149,7 +145,6 @@
         #reviveBtn { background-color: #baffc9; display: none; }
         .message { margin-top: 10px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.1rem; }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -293,13 +288,10 @@
         const reviveBtn = document.getElementById('reviveBtn');
         const bannerElement = document.getElementById('special-banner');
 
-        // CRITICAL FIX FOR IOS SCREEN SCROLLING
-        // Intercept touch movements at the document root to prevent mobile safari body bounce
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
 
-        // Ensure elements inside our controls or modal are still allowed to register interaction normally
         document.querySelectorAll('select, button, .modal-content').forEach(element => {
             element.addEventListener('touchmove', function(e) {
                 e.stopPropagation();
@@ -340,7 +332,7 @@
             diagCatRow = -1;
             diagCatCol = -1;
 
-            generatePuzzle();
+            generateSolvablePuzzle(diff);
             playerBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
             emojiBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
             
@@ -391,7 +383,32 @@
             }
         }
 
-        function generatePuzzle() {
+        /* GUARANTEED LOGICAL GENERATION ENGINE */
+        function generateSolvablePuzzle(diff) {
+            let attempts = 0;
+            const maxAttempts = 1000;
+            
+            while (attempts < maxAttempts) {
+                attempts++;
+                generateCandidatePuzzle();
+                
+                // Solve via deduction loop
+                const solverResult = solveUsingLogicOnly();
+                if (solverResult.solvable) {
+                    const movesCount = solverResult.moves;
+                    // Filter by difficulty tier based on deduction steps
+                    if (diff === 'easy' && movesCount > gridSize * 1.5) continue;
+                    if (diff === 'hard' && movesCount < gridSize * 1.2) continue;
+                    
+                    return; // Successfully found and locked down an appropriate, guess-free puzzle!
+                }
+            }
+            
+            // Fallback safety if the thresholds are too strict
+            generateCandidatePuzzle();
+        }
+
+        function generateCandidatePuzzle() {
             solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
             let positions = Array(gridSize).fill(-1); 
             
@@ -451,63 +468,177 @@
 
             positions.forEach((col, row) => { solution[row][col] = true; });
 
+            // REGION GENERATION: Compact local gravity clustering
             boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
-            let queue = [];
-            
+            let seeds = [];
             positions.forEach((col, row) => {
                 boardLayout[row][col] = row; 
-                queue.push({r: row, c: col, color: row});
+                seeds.push({r: row, c: col, color: row});
             });
 
-            const diff = document.getElementById('diffSelect').value;
-            const growthChance = diff === 'easy' ? 0.95 : (diff === 'medium' ? 0.75 : 0.45);
+            let unassigned = gridSize * gridSize - gridSize;
+            let queue = [...seeds];
 
-            queue.sort(() => Math.random() - 0.5);
-            while (queue.length > 0) {
+            while (unassigned > 0 && queue.length > 0) {
+                queue.sort(() => Math.random() - 0.5);
                 let nextQueue = [];
-                for (let curr of queue) {
-                    let dirs = [[-1,0], [1,0], [0,-1], [0,1]];
-                    if (diff === 'hard') dirs.push([-1,-1], [-1,1], [1,-1], [1,1]); 
-                    dirs.sort(() => Math.random() - 0.5);
-
-                    let expanded = false;
-                    let hasEmptyNeighbor = false;
-
+                
+                for (let cell of queue) {
+                    let dirs = [[-1,0], [1,0], [0,-1], [0,1]].sort(() => Math.random() - 0.5);
+                    let placed = false;
                     for (let [dr, dc] of dirs) {
-                        let nr = curr.r + dr, nc = curr.c + dc;
+                        let nr = cell.r + dr, nc = cell.c + dc;
                         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && boardLayout[nr][nc] === -1) {
-                            hasEmptyNeighbor = true;
-                            if (Math.random() < growthChance) {
-                                boardLayout[nr][nc] = curr.color;
-                                nextQueue.push({r: nr, c: nc, color: curr.color});
-                                expanded = true;
-                                if (diff === 'easy') break; 
-                            }
+                            boardLayout[nr][nc] = cell.color;
+                            nextQueue.push({r: nr, c: nc, color: cell.color});
+                            unassigned--;
+                            placed = true;
+                            break; 
                         }
                     }
-                    if (!expanded && hasEmptyNeighbor && Math.random() < 0.5) {
-                        nextQueue.push(curr); 
+                    if (placed || Math.random() < 0.3) {
+                        nextQueue.push(cell);
                     }
                 }
                 queue = nextQueue;
-                
-                if (queue.length === 0) {
-                    for (let r = 0; r < gridSize; r++) {
-                        for (let c = 0; c < gridSize; c++) {
-                            if (boardLayout[r][c] === -1) {
-                                let neighbors = [[-1,0],[1,0],[0,-1],[0,1]]
-                                    .map(([dr,dc]) => (boardLayout[r+dr] || [])[c+dc])
-                                    .filter(v => v !== undefined && v !== -1);
-                                if (neighbors.length > 0) {
-                                    boardLayout[r][c] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                                } else {
-                                    boardLayout[r][c] = Math.floor(Math.random() * gridSize);
+            }
+
+            // Cleanup isolated unassigned cells
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    if (boardLayout[r][c] === -1) {
+                        let neighbors = [[-1,0],[1,0],[0,-1],[0,1]]
+                            .map(([dr,dc]) => (boardLayout[r+dr] || [])[c+dc])
+                            .filter(v => v !== undefined && v !== -1);
+                        boardLayout[r][c] = neighbors.length > 0 ? neighbors[0] : Math.floor(Math.random() * gridSize);
+                    }
+                }
+            }
+        }
+
+        /* 
+           HUMAN-LOGIC PUZZLE SOLVER ENGINE
+           Simulates clean, non-backtracking logical deductions. 
+        */
+        function solveUsingLogicOnly() {
+            // Setup Solver State: 0 = Unknown, 1 = Excluded (✖), 2 = Placed Cat (🐱)
+            let solverBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
+            let solved = false;
+            let movesCount = 0;
+            let iterations = 0;
+            const maxIterations = gridSize * gridSize;
+
+            while (iterations < maxIterations) {
+                iterations++;
+                let progressMade = false;
+
+                // Rule 1: Eliminate surrounding cells of confirmed Cats
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        if (solverBoard[r][c] === 2) {
+                            let touchDirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+                            // Special rule handling for Diagonal Wildcard Cat
+                            let isDiagCat = (hasDiagonalCat && r === diagCatRow && c === diagCatCol);
+                            
+                            for (let [dr, dc] of touchDirs) {
+                                let nr = r + dr, nc = c + dc;
+                                if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && solverBoard[nr][nc] === 0) {
+                                    solverBoard[nr][nc] = 1; // Mark adjacent touches as ✖
+                                    progressMade = true;
+                                }
+                            }
+
+                            if (isDiagCat) {
+                                for (let d = 1; d < gridSize; d++) {
+                                    let diagonals = [[d, d], [d, -d], [-d, d], [-d, -d]];
+                                    for (let [dr, dc] of diagonals) {
+                                        let nr = r + dr, nc = c + dc;
+                                        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && solverBoard[nr][nc] === 0) {
+                                            solverBoard[nr][nc] = 1;
+                                            progressMade = true;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                // Rule 2: If a group (row, col, color) has exactly ONE remaining unexcluded square, place Cat
+                
+                // Rows
+                for (let r = 0; r < gridSize; r++) {
+                    let cats = 0, open = [];
+                    for (let c = 0; c < gridSize; c++) {
+                        if (solverBoard[r][c] === 2) cats++;
+                        if (solverBoard[r][c] === 0) open.push(c);
+                    }
+                    if (cats === 0 && open.length === 1) {
+                        solverBoard[r][open[0]] = 2;
+                        progressMade = true;
+                        movesCount++;
+                    }
+                    if (cats === 1 && open.length > 0) {
+                        open.forEach(c => solverBoard[r][c] = 1);
+                        progressMade = true;
+                    }
+                }
+
+                // Columns
+                for (let c = 0; c < gridSize; c++) {
+                    let cats = 0, open = [];
+                    for (let r = 0; r < gridSize; r++) {
+                        if (solverBoard[r][c] === 2) cats++;
+                        if (solverBoard[r][c] === 0) open.push(r);
+                    }
+                    if (cats === 0 && open.length === 1) {
+                        solverBoard[open[0]][c] = 2;
+                        progressMade = true;
+                        movesCount++;
+                    }
+                    if (cats === 1 && open.length > 0) {
+                        open.forEach(r => solverBoard[r][c] = 1);
+                        progressMade = true;
+                    }
+                }
+
+                // Color regions
+                for (let color = 0; color < gridSize; color++) {
+                    let cats = 0, open = [];
+                    for (let r = 0; r < gridSize; r++) {
+                        for (let c = 0; c < gridSize; c++) {
+                            if (boardLayout[r][c] === color) {
+                                if (solverBoard[r][c] === 2) cats++;
+                                if (solverBoard[r][c] === 0) open.push({r, c});
+                            }
+                        }
+                    }
+                    if (cats === 0 && open.length === 1) {
+                        solverBoard[open[0].r][open[0].c] = 2;
+                        progressMade = true;
+                        movesCount++;
+                    }
+                    if (cats === 1 && open.length > 0) {
+                        open.forEach(cell => solverBoard[cell.r][cell.c] = 1);
+                        progressMade = true;
+                    }
+                }
+
+                if (!progressMade) break; 
             }
+
+            // Verify if the Board is Fully Solved
+            let catCount = 0;
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    if (solverBoard[r][c] === 2) catCount++;
+                }
+            }
+
+            return {
+                solvable: (catCount === gridSize),
+                moves: movesCount
+            };
         }
 
         function renderBoard() {
@@ -656,7 +787,7 @@
         }
 
         startNewGame();
-        
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/MeowMeowFind/sw.js')
                 .then(() => console.log('Offline PWA active on GitHub Pages! 🐾'))
