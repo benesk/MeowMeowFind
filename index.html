@@ -13,7 +13,6 @@
             --border-color: #d1c7bd;
         }
         
-        /* Layout boundaries optimized for scrolling and panning when zoomed */
         html, body {
             width: 100%;
             height: 100%;
@@ -95,7 +94,6 @@
             text-align: center;
         }
 
-        /* Dynamic Layout Board Setup */
         #grid-container {
             padding: 4px;
             background-color: var(--text-color);
@@ -107,10 +105,9 @@
         #grid {
             display: grid;
             gap: 2px;
-            touch-action: none; /* Let pointer scripts control dragging safely */
+            touch-action: pan-x pan-y pinch-zoom; 
         }
 
-        /* Orientation-aware sizing rules to maximize screen usage */
         @media (orientation: portrait) {
             #grid {
                 width: 86vw;
@@ -142,6 +139,7 @@
             min-width: 0;
             min-height: 0;
             overflow: hidden;
+            touch-action: manipulation; 
             transition: background-color 0.2s ease, transform 0.1s ease;
         }
 
@@ -224,7 +222,6 @@
             cursor: pointer;
         }
 
-        /* Clustered territories definitions */
         .c-0 { background-color: #ffdfba; }
         .c-1 { background-color: #baffc9; }
         .c-2 { background-color: #bae1ff; }
@@ -279,13 +276,13 @@
 
     <div id="rulesModal" class="modal">
         <div class="modal-content">
-            <h2>Rules & Gameplay</h2>
+            <h2>Rules & Controls</h2>
             <ul>
-                <li><strong>Objective:</strong> Locate exactly one hidden Cat in every row, column, and color region!</li>
-                <li><strong>iOS Scaling:</strong> You can now use standard two-finger pinches to zoom in and out of the grid freely.</li>
-                <li><strong>Tap / Drag:</strong> Tap a cell to instantly paint or clear an <strong>✖</strong> mark. Drag your finger across multiple squares to clear zones quickly.</li>
-                <li><strong>Long Press (Hold):</strong> Press and hold any cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
-                <li><strong>Dynamic Hints:</strong> Hints require independent actions to recharge. Easy needs 3 moves, Medium needs 7, and Hard needs 12!</li>
+                <li><strong>Objective:</strong> Find exactly one hidden Cat in every row, column, and color territory!</li>
+                <li><strong>Single Tap:</strong> Tap any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. You can also press and drag smoothly across tiles to cross out large sections at once.</li>
+                <li><strong>Long Press (Hold):</strong> Keep your finger pressed firmly down on a cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
+                <li><strong>iOS Zooming:</strong> Use two-finger screen pinches to scale up and pan the board freely. Double tapping has been safely disabled.</li>
+                <li><strong>Recharging Hints:</strong> Hints require regular valid moves to charge back up. Easy requires 3 moves, Medium requires 7, and Hard requires 12!</li>
             </ul>
             <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
         </div>
@@ -319,7 +316,6 @@
         let longPressTriggered = false;
         const LONG_PRESS_DURATION = 350; 
 
-        // Dynamic hint parameters
         let movesSinceLastHint = 0; 
         let requiredMovesForHint = 3;
 
@@ -330,15 +326,13 @@
         const hintBtn = document.getElementById('hintBtn');
         const bannerElement = document.getElementById('special-banner');
 
-        // Allow touch movements only when pinching or zoom-scrolling
         document.body.addEventListener('touchmove', function(e) {
-            if (e.touches.length === 1 && isDragging) {
-                e.preventDefault();
-            }
+            if (e.touches && e.touches.length > 1) return; 
+            if (isDragging) e.preventDefault();
         }, { passive: false });
 
         document.querySelectorAll('select, button, .modal-content').forEach(element => {
-            element.addEventListener('touchmove', function(e) {
+            element.addEventListener('pointermove', function(e) {
                 e.stopPropagation();
             }, { passive: true });
         });
@@ -356,9 +350,8 @@
             cancelLongPress();
         };
 
-        window.addEventListener('mouseup', endDrag);
-        window.addEventListener('touchend', endDrag);
-        window.addEventListener('touchcancel', endDrag);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
 
         function toggleModal(show) {
             document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
@@ -672,6 +665,7 @@
             return { solvable: (catCount === gridSize), moves: movesCount, history: historyLog };
         }
 
+        /* UPDATED SOLVER HINT ENGINE */
         function triggerLogicalHint() {
             if (gameOver || movesSinceLastHint < requiredMovesForHint) return;
 
@@ -751,10 +745,9 @@
         }
 
         function handleInteractionStart(e) {
-            if (gameOver || e.touches && e.touches.length > 1) return; // Ignore multi-finger gestures (pinching)
+            if (gameOver || !e.isPrimary) return; 
             
-            let touch = e.touches ? e.touches[0] : e;
-            let cell = touch.target.closest('.cell');
+            let cell = e.target.closest('.cell');
             if (!cell) return;
             
             let r = parseInt(cell.dataset.row);
@@ -776,11 +769,9 @@
 
         function handleInteractionEnd(e) {
             cancelLongPress();
-            if (gameOver || longPressTriggered || e.touches && e.touches.length > 0) return;
+            if (gameOver || longPressTriggered || !e.isPrimary) return;
 
-            // Extract correct element target dependent on event dispatch context
-            let targetEl = e.changedTouches ? e.changedTouches[0].target : e.target;
-            let cell = targetEl.closest('.cell');
+            let cell = e.target.closest('.cell');
             if (!cell) return;
             
             let r = parseInt(cell.dataset.row);
@@ -790,10 +781,9 @@
         }
 
         function handleMoveDrag(e) {
-            if (!isDragging || gameOver || e.touches && e.touches.length > 1) return;
+            if (!isDragging || gameOver || !e.isPrimary) return;
             
-            let touch = e.touches ? e.touches[0] : e;
-            let target = document.elementFromPoint(touch.clientX, touch.clientY);
+            let target = document.elementFromPoint(e.clientX, e.clientY);
             if (!target) return;
             
             let cell = target.closest('.cell');
@@ -810,13 +800,9 @@
             }
         }
 
-        gridElement.addEventListener('touchstart', handleInteractionStart, { passive: false });
-        gridElement.addEventListener('touchend', handleInteractionEnd, { passive: false });
-        gridElement.addEventListener('touchmove', handleMoveDrag, { passive: false });
-
-        gridElement.addEventListener('mousedown', handleInteractionStart);
-        gridElement.addEventListener('mouseup', handleInteractionEnd);
-        gridElement.addEventListener('mousemove', handleMoveDrag);
+        gridElement.addEventListener('pointerdown', handleInteractionStart);
+        gridElement.addEventListener('pointerup', handleInteractionEnd);
+        gridElement.addEventListener('pointermove', handleMoveDrag);
 
         window.addEventListener('click', (e) => {
             if (e.target === document.getElementById('rulesModal')) toggleModal(false);
