@@ -34,8 +34,6 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            
-            /* CRITICAL FIX: Blocks double-tap to zoom across the entire viewport framework */
             touch-action: manipulation; 
         }
         
@@ -119,10 +117,7 @@
             justify-content: center;
             font-weight: bold;
             -webkit-user-select: none;
-            
-            /* CRITICAL FIX: Blocks mobile double-tap to zoom inside individual grid nodes */
             touch-action: manipulation; 
-            
             aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
@@ -286,6 +281,7 @@
         let lastTapRow = -1;
         let lastTapCol = -1;
         let lastTrackedCell = null;
+        let lastTouchTime = 0;
 
         const gridElement = document.getElementById('grid');
         const heartsElement = document.getElementById('hearts');
@@ -655,9 +651,23 @@
             }
         }
 
+        /* AGGRESSIVE GESTURE BLOCKERS FOR IOS SAFARI
+           Intercepts touch sequences before they hit native layout engine engines.
+        */
+        gridElement.addEventListener('touchstart', (e) => {
+            let now = new Date().getTime();
+            let timespan = now - lastTouchTime;
+            
+            if (timespan < 300 && timespan > 0) {
+                e.preventDefault(); 
+            }
+            lastTouchTime = now;
+        }, { passive: false });
+
         gridElement.addEventListener('pointerdown', (e) => {
             if (gameOver) return;
             e.preventDefault();
+            e.stopPropagation();
             
             let cell = e.target.closest('.cell');
             if (!cell) return;
@@ -666,7 +676,7 @@
             let c = parseInt(cell.dataset.col);
             let now = new Date().getTime();
 
-            if ((now - lastTapTime < 250) && (r === lastTapRow && c === lastTapCol)) {
+            if ((now - lastTapTime < 280) && (r === lastTapRow && c === lastTapCol)) {
                 isDragging = false;
                 handleCatPlacement(r, c);
                 lastTapRow = -1;
