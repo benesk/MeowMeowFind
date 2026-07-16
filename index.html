@@ -157,9 +157,11 @@
 
         .actions-container {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             margin-top: 15px;
             margin-bottom: 20px;
+            width: 100%;
+            justify-content: center;
         }
         .btn {
             padding: 10px 24px;
@@ -180,6 +182,7 @@
             box-shadow: 0 4px 0 #8c827a;
             cursor: not-allowed;
             opacity: 0.6;
+            transform: none !important;
         }
                 
         #reviveBtn { background-color: #baffc9; display: none; }
@@ -279,8 +282,8 @@
             <h2>Rules & Controls</h2>
             <ul>
                 <li><strong>Objective:</strong> Find exactly one hidden Cat in every row, column, and color territory!</li>
-                <li><strong>Single Tap:</strong> Tap any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. You can also press and drag smoothly across tiles to cross out large sections at once.</li>
-                <li><strong>Long Press (Hold):</strong> Keep your finger pressed firmly down on a cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
+                <li><strong>Single Tap:</strong> Tap any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. Drag smoothly to mass-clear zones.</li>
+                <li><strong>Long Press (Hold):</strong> Keep your finger pressed down on a cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
                 <li><strong>iOS Zooming:</strong> Use two-finger screen pinches to scale up and pan the board freely. Double tapping has been safely disabled.</li>
                 <li><strong>Recharging Hints:</strong> Hints require regular valid moves to charge back up. Easy requires 3 moves, Medium requires 7, and Hard requires 12!</li>
             </ul>
@@ -601,8 +604,10 @@
                     }
                     if (cats === 1 && open.length > 0) {
                         open.forEach(c => {
-                            solverBoard[r][c] = 1;
-                            historyLog.push({r: r, c: c, type: 1});
+                            if(solverBoard[r][c] !== 1) {
+                                solverBoard[r][c] = 1;
+                                historyLog.push({r: r, c: c, type: 1});
+                            }
                         });
                         progressMade = true;
                     }
@@ -622,8 +627,10 @@
                     }
                     if (cats === 1 && open.length > 0) {
                         open.forEach(r => {
-                            solverBoard[r][c] = 1;
-                            historyLog.push({r: r, c: c, type: 1});
+                            if(solverBoard[r][c] !== 1) {
+                                solverBoard[r][c] = 1;
+                                historyLog.push({r: r, c: c, type: 1});
+                            }
                         });
                         progressMade = true;
                     }
@@ -647,8 +654,10 @@
                     }
                     if (cats === 1 && open.length > 0) {
                         open.forEach(cell => {
-                            solverBoard[cell.r][cell.c] = 1;
-                            historyLog.push({r: cell.r, c: cell.c, type: 1});
+                            if(solverBoard[cell.r][cell.c] !== 1) {
+                                solverBoard[cell.r][cell.c] = 1;
+                                historyLog.push({r: cell.r, c: cell.c, type: 1});
+                            }
                         });
                         progressMade = true;
                     }
@@ -665,7 +674,6 @@
             return { solvable: (catCount === gridSize), moves: movesCount, history: historyLog };
         }
 
-        /* UPDATED SOLVER HINT ENGINE */
         function triggerLogicalHint() {
             if (gameOver || movesSinceLastHint < requiredMovesForHint) return;
 
@@ -696,8 +704,8 @@
         function incrementMoveCredit() {
             if (movesSinceLastHint < requiredMovesForHint) {
                 movesSinceLastHint++;
-                updateHintButtonState();
             }
+            updateHintButtonState();
         }
 
         function updateHintButtonState() {
