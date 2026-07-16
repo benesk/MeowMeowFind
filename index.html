@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no">
     <title>MeowMeowFind</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="/MeowMeowFind/icon-192.png">
@@ -12,29 +12,29 @@
             --text-color: #4a3e3d;
             --border-color: #d1c7bd;
         }
+        
+        /* Layout boundaries optimized for scrolling and panning when zoomed */
         html, body {
-            overflow: hidden;
-            position: fixed;
             width: 100%;
             height: 100%;
-            overscroll-behavior: none; 
-            -webkit-overflow-scrolling: none;
-        }
-        body {
-            font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
+            font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: none; 
+        }
+
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 10px;
+            box-sizing: border-box;
         }
         
         .header-container {
@@ -64,9 +64,9 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             background: rgba(0,0,0,0.03);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
         }
         label { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;}
@@ -81,58 +81,55 @@
         .stats {
             display: flex;
             gap: 20px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
             font-size: 1.2rem;
+            align-items: center;
         }
         #special-banner {
             font-size: 0.95rem;
             color: #d9534f;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             min-height: 18px;
             text-align: center;
         }
+
+        /* Dynamic Layout Board Setup */
         #grid-container {
             padding: 4px;
             background-color: var(--text-color);
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-            contain: layout paint; 
+            margin: 0 auto;
         }
 
-        /* RESPONSIVE GRID LAYOUT FOR PORTRAIT VS LANDSCAPE */
         #grid {
             display: grid;
             gap: 2px;
-            -webkit-user-select: none;
-            touch-action: none;
-            width: 75vmin;
-            height: 75vmin;
+            touch-action: none; /* Let pointer scripts control dragging safely */
         }
 
+        /* Orientation-aware sizing rules to maximize screen usage */
         @media (orientation: portrait) {
             #grid {
-                width: 82vw;
-                height: 82vw;
-                max-width: 440px;
-                max-height: 440px;
+                width: 86vw;
+                height: 86vw;
+                max-width: 500px;
+                max-height: 500px;
             }
-            h1 { font-size: 1.8rem; }
         }
 
         @media (orientation: landscape) {
             #grid {
                 width: 58vh;
                 height: 58vh;
-                max-width: 360px;
-                max-height: 360px;
+                max-width: 400px;
+                max-height: 400px;
             }
-            body { padding: 5px; }
+            .wrapper { padding: 5px; }
             h1 { font-size: 1.4rem; }
-            .controls { margin-bottom: 4px; padding: 4px 10px; }
-            .actions-container { margin-top: 8px; }
-            .btn { padding: 8px 20px; font-size: 0.9rem; }
+            .controls { margin-bottom: 4px; padding: 4px 8px; }
         }
 
         .cell {
@@ -141,21 +138,34 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            -webkit-user-select: none;
-            touch-action: none; 
             aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
             overflow: hidden;
+            transition: background-color 0.2s ease, transform 0.1s ease;
         }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .hint-cat { background-color: #a8f5ba !important; animation: flash 0.5s alternate infinite; }
+        .hint-x { background-color: #fef0ad !important; animation: flash 0.5s alternate infinite; }
+
+        @keyframes flash {
+            from { filter: brightness(1); }
+            to { filter: brightness(0.85); }
+        }
+
         .actions-container {
             display: flex;
             gap: 10px;
             margin-top: 15px;
+            margin-bottom: 20px;
         }
         .btn {
-            padding: 12px 28px;
-            font-size: 1rem;
+            padding: 10px 24px;
+            font-size: 0.95rem;
             font-weight: bold;
             background-color: #ffb6c1;
             color: #4a3e3d;
@@ -166,9 +176,16 @@
             -webkit-tap-highlight-color: transparent;
         }
         .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #4a3e3d; }
+        .btn:disabled {
+            background-color: #d1c7bd;
+            color: #8c827a;
+            box-shadow: 0 4px 0 #8c827a;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
                 
         #reviveBtn { background-color: #baffc9; display: none; }
-        .message { margin-top: 10px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.1rem; }
+        .message { margin-top: 8px; font-weight: bold; min-height: 20px; text-align: center; font-size: 1.05rem; }
 
         .modal {
             display: none;
@@ -193,17 +210,9 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             text-align: left;
         }
-        .modal-content h2 {
-            margin-top: 0;
-            text-align: center;
-        }
-        .modal-content ul {
-            padding-left: 20px;
-            line-height: 1.5;
-        }
-        .modal-content li {
-            margin-bottom: 8px;
-        }
+        .modal-content h2 { margin-top: 0; text-align: center; }
+        .modal-content ul { padding-left: 20px; line-height: 1.5; }
+        .modal-content li { margin-bottom: 8px; }
         .close-modal-btn {
             display: block;
             margin: 15px auto 0 auto;
@@ -215,7 +224,7 @@
             cursor: pointer;
         }
 
-        /* Color blocks */
+        /* Clustered territories definitions */
         .c-0 { background-color: #ffdfba; }
         .c-1 { background-color: #baffc9; }
         .c-2 { background-color: #bae1ff; }
@@ -231,38 +240,41 @@
     </style>
 </head>
 <body>
-    <div class="header-container">
-        <h1>🐱 MeowMeowFind</h1>
-        <button class="info-btn" onclick="toggleModal(true)">ⓘ</button>
-    </div>
-        
-    <div class="controls">
-        <label>Size: 
-            <select id="sizeSelect" onchange="startNewGame()">
-                <option value="5">5 x 5</option>
-                <option value="8" selected>8 x 8</option>
-                <option value="12">12 x 12</option>
-            </select>
-        </label>
-        <label>Difficulty: 
-            <select id="diffSelect" onchange="startNewGame()">
-                <option value="easy">Easy</option>
-                <option value="medium" selected>Medium</option>
-                <option value="hard">Hard</option>
-            </select>
-        </label>
-    </div>
+    <div class="wrapper">
+        <div class="header-container">
+            <h1>🐱 MeowMeowFind</h1>
+            <button class="info-btn" onclick="toggleModal(true)">ⓘ</button>
+        </div>
+            
+        <div class="controls">
+            <label>Size: 
+                <select id="sizeSelect" onchange="startNewGame()">
+                    <option value="5">5 x 5</option>
+                    <option value="8" selected>8 x 8</option>
+                    <option value="12">12 x 12</option>
+                </select>
+            </label>
+            <label>Difficulty: 
+                <select id="diffSelect" onchange="startNewGame()">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </label>
+        </div>
 
-    <div id="special-banner"></div>
-    <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
+        <div id="special-banner"></div>
+        <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
 
-    <div id="grid-container"><div id="grid"></div></div>
+        <div id="grid-container"><div id="grid"></div></div>
 
-    <div id="message" class="message"></div>
+        <div id="message" class="message"></div>
 
-    <div class="actions-container">
-        <button class="btn" onclick="startNewGame()">New Game</button>
-        <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get more ❤️'s</button>
+        <div class="actions-container">
+            <button class="btn" onclick="startNewGame()">New Game</button>
+            <button id="hintBtn" class="btn" onclick="triggerLogicalHint()">Hint</button>
+            <button id="reviveBtn" class="btn" onclick="getMoreLives()">Get more ❤️'s</button>
+        </div>
     </div>
 
     <div id="rulesModal" class="modal">
@@ -270,11 +282,10 @@
             <h2>Rules & Gameplay</h2>
             <ul>
                 <li><strong>Objective:</strong> Locate exactly one hidden Cat in every row, column, and color region!</li>
-                <li><strong>Single Tap & Drag:</strong> Quickly paint or erase `✖` marks across rows/columns. It never costs lives!</li>
-                <li><strong>Double Tap:</strong> Drop a Cat (🐱, 😻, 😺, 😽) onto a square. Watch out! Placing a cat in the wrong spot costs one ❤️.</li>
-                <li><strong>Note:</strong> Standard cats cannot touch adjacent neighbors (even diagonally), but *are* allowed to share long-range diagonal lines.</li>
-                <li><strong>Special Wildcard (10% Chance):</strong> In rare games, one full-body Cat (🐈) will appear. **No other cat on the entire board can be on the same row, column, or diagonal line as this specific 🐈.**</li>
-                <li><strong>Revives:</strong> If you run out of lives, you can revive to restore them. You get <strong>unlimited</strong> revives on Easy, up to <strong>2</strong> on Medium, and up to <strong>3</strong> on Hard.</li>
+                <li><strong>iOS Scaling:</strong> You can now use standard two-finger pinches to zoom in and out of the grid freely.</li>
+                <li><strong>Tap / Drag:</strong> Tap a cell to instantly paint or clear an <strong>✖</strong> mark. Drag your finger across multiple squares to clear zones quickly.</li>
+                <li><strong>Long Press (Hold):</strong> Press and hold any cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
+                <li><strong>Dynamic Hints:</strong> Hints require independent actions to recharge. Easy needs 3 moves, Medium needs 7, and Hard needs 12!</li>
             </ul>
             <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
         </div>
@@ -301,20 +312,29 @@
         
         let reviveCount = 0;
         let maxRevives = Infinity;
-
-        let lastTapTime = 0;
-        let lastTapRow = -1;
-        let lastTapCol = -1;
         let lastTrackedCell = null;
+
+        // Long Press States
+        let longPressTimer = null;
+        let longPressTriggered = false;
+        const LONG_PRESS_DURATION = 350; 
+
+        // Dynamic hint parameters
+        let movesSinceLastHint = 0; 
+        let requiredMovesForHint = 3;
 
         const gridElement = document.getElementById('grid');
         const heartsElement = document.getElementById('hearts');
         const messageElement = document.getElementById('message');
         const reviveBtn = document.getElementById('reviveBtn');
+        const hintBtn = document.getElementById('hintBtn');
         const bannerElement = document.getElementById('special-banner');
 
-        document.addEventListener('touchmove', function(e) {
-            e.preventDefault();
+        // Allow touch movements only when pinching or zoom-scrolling
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 1 && isDragging) {
+                e.preventDefault();
+            }
         }, { passive: false });
 
         document.querySelectorAll('select, button, .modal-content').forEach(element => {
@@ -323,7 +343,19 @@
             }, { passive: true });
         });
 
-        const endDrag = () => { isDragging = false; lastTrackedCell = null; };
+        const cancelLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        const endDrag = () => { 
+            isDragging = false; 
+            lastTrackedCell = null; 
+            cancelLongPress();
+        };
+
         window.addEventListener('mouseup', endDrag);
         window.addEventListener('touchend', endDrag);
         window.addEventListener('touchcancel', endDrag);
@@ -339,19 +371,25 @@
             if (diff === 'easy') {
                 lives = 3;
                 maxRevives = Infinity;
+                requiredMovesForHint = 3;
             } else if (diff === 'medium') {
                 lives = 4;
                 maxRevives = 2;
+                requiredMovesForHint = 7;
             } else { 
                 lives = 5;
                 maxRevives = 3;
+                requiredMovesForHint = 12;
             }
             
             maxLivesForDiff = lives;
             reviveCount = 0;
             gameOver = false;
+            movesSinceLastHint = requiredMovesForHint; 
+            
             reviveBtn.style.display = 'none'; 
             updateHearts();
+            updateHintButtonState();
             messageElement.textContent = "";
             bannerElement.textContent = "";
 
@@ -372,7 +410,6 @@
 
         function getMoreLives() {
             if (reviveCount >= maxRevives) return;
-            
             lives = maxLivesForDiff;
             reviveCount++;
             gameOver = false;
@@ -392,38 +429,25 @@
                     colorGroups[color].push({r, c});
                 }
             }
-
-            const validGroups = Object.keys(colorGroups)
-                .map(key => colorGroups[key])
-                .filter(group => group.length >= 5);
-
+            const validGroups = Object.keys(colorGroups).map(key => colorGroups[key]).filter(g => g.length >= 5);
             if (validGroups.length > 0) {
                 const chosenGroup = validGroups[Math.floor(Math.random() * validGroups.length)];
-                const shuffled = chosenGroup.sort(() => Math.random() - 0.5);
-                const emptyTiles = shuffled.filter(tile => !solution[tile.r][tile.c]);
-                const targetCluesCount = Math.floor(chosenGroup.length / 2);
-                
-                for (let i = 0; i < Math.min(targetCluesCount, emptyTiles.length); i++) {
-                    const tile = emptyTiles[i];
-                    playerBoard[tile.r][tile.c] = 1;
+                const emptyTiles = chosenGroup.filter(tile => !solution[tile.r][tile.c]);
+                for (let i = 0; i < Math.min(Math.floor(chosenGroup.length / 2), emptyTiles.length); i++) {
+                    playerBoard[emptyTiles[i].r][emptyTiles[i].c] = 1;
                 }
             }
         }
 
         function generateSolvablePuzzle(diff) {
             let attempts = 0;
-            const maxAttempts = 1000;
-            
-            while (attempts < maxAttempts) {
+            while (attempts < 1000) {
                 attempts++;
                 generateCandidatePuzzle();
-                
                 const solverResult = solveUsingLogicOnly();
                 if (solverResult.solvable) {
-                    const movesCount = solverResult.moves;
-                    if (diff === 'easy' && movesCount > gridSize * 1.5) continue;
-                    if (diff === 'hard' && movesCount < gridSize * 1.2) continue;
-                    
+                    if (diff === 'easy' && solverResult.moves > gridSize * 1.5) continue;
+                    if (diff === 'hard' && solverResult.moves < gridSize * 1.2) continue;
                     return; 
                 }
             }
@@ -433,7 +457,6 @@
         function generateCandidatePuzzle() {
             solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
             let positions = Array(gridSize).fill(-1); 
-            
             let localDiagRow = hasDiagonalCat ? Math.floor(Math.random() * gridSize) : -1;
             diagCatRow = localDiagRow;
 
@@ -444,26 +467,15 @@
             function isSafe(row, col) {
                 for (let r = 0; r < row; r++) {
                     if (positions[r] === col) return false;
+                    if (Math.abs(row - r) === 1 && Math.abs(col - positions[r]) <= 1) return false;
                 }
-
-                for (let r = 0; r < row; r++) {
-                    let c = positions[r];
-                    if (Math.abs(row - r) === 1 && Math.abs(col - c) <= 1) {
-                        return false;
-                    }
-                }
-
-                if (hasDiagonalCat) {
+                if (hasDiagonalCat && localDiagRow !== -1) {
                     if (row === localDiagRow) {
                         for (let r = 0; r < row; r++) {
-                            let c = positions[r];
-                            if (Math.abs(row - r) === Math.abs(col - c)) return false;
+                            if (Math.abs(row - r) === Math.abs(col - positions[r])) return false;
                         }
-                    } else {
-                        if (localDiagRow < row && localDiagRow !== -1) {
-                            let diagCol = positions[localDiagRow];
-                            if (Math.abs(row - localDiagRow) === Math.abs(col - diagCol)) return false;
-                        }
+                    } else if (localDiagRow < row) {
+                        if (Math.abs(row - localDiagRow) === Math.abs(col - positions[localDiagRow])) return false;
                     }
                 }
                 return true;
@@ -481,66 +493,71 @@
                 }
                 return false;
             }
-            
             solve(0);
             
-            if (hasDiagonalCat) {
-                diagCatCol = positions[localDiagRow];
-            }
-
+            if (hasDiagonalCat) diagCatCol = positions[localDiagRow];
             positions.forEach((col, row) => { solution[row][col] = true; });
 
             boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
             let seeds = [];
+            
             positions.forEach((col, row) => {
                 boardLayout[row][col] = row; 
                 seeds.push({r: row, c: col, color: row});
             });
 
-            let unassigned = gridSize * gridSize - gridSize;
-            let queue = [...seeds];
+            let queues = seeds.map(s => [s]);
+            let activeColorBands = seeds.length;
 
-            while (unassigned > 0 && queue.length > 0) {
-                queue.sort(() => Math.random() - 0.5);
-                let nextQueue = [];
-                
-                for (let cell of queue) {
-                    let dirs = [[-1,0], [1,0], [0,-1], [0,1]].sort(() => Math.random() - 0.5);
-                    let placed = false;
-                    for (let [dr, dc] of dirs) {
+            while (activeColorBands > 0) {
+                activeColorBands = 0;
+                for (let colorIdx = 0; colorIdx < gridSize; colorIdx++) {
+                    let q = queues[colorIdx];
+                    if (q.length === 0) continue;
+                    
+                    activeColorBands++;
+                    let randIndex = Math.floor(Math.random() * q.length);
+                    let cell = q.splice(randIndex, 1)[0];
+                    
+                    let directions = [[-1,0], [1,0], [0,-1], [0,1]].sort(() => Math.random() - 0.5);
+                    for (let [dr, dc] of directions) {
                         let nr = cell.r + dr, nc = cell.c + dc;
                         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && boardLayout[nr][nc] === -1) {
-                            boardLayout[nr][nc] = cell.color;
-                            nextQueue.push({r: nr, c: nc, color: cell.color});
-                            unassigned--;
-                            placed = true;
-                            break; 
+                            boardLayout[nr][nc] = colorIdx;
+                            let newCell = {r: nr, c: nc, color: colorIdx};
+                            q.push(newCell);
+                            queues[colorIdx].push(newCell); 
                         }
                     }
-                    if (placed || Math.random() < 0.3) {
-                        nextQueue.push(cell);
-                    }
                 }
-                queue = nextQueue;
             }
 
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
                     if (boardLayout[r][c] === -1) {
-                        let neighbors = [[-1,0],[1,0],[0,-1],[0,1]]
+                        let adjacent = [[-1,0],[1,0],[0,-1],[0,1]]
                             .map(([dr,dc]) => (boardLayout[r+dr] || [])[c+dc])
                             .filter(v => v !== undefined && v !== -1);
-                        boardLayout[r][c] = neighbors.length > 0 ? neighbors[0] : Math.floor(Math.random() * gridSize);
+                        boardLayout[r][c] = adjacent.length > 0 ? adjacent[0] : 0;
                     }
                 }
             }
         }
 
-        function solveUsingLogicOnly() {
+        function solveUsingLogicOnly(customStartBoard = null) {
             let solverBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
+            if (customStartBoard) {
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        solverBoard[r][c] = customStartBoard[r][c];
+                    }
+                }
+            }
+
             let movesCount = 0;
             let iterations = 0;
             const maxIterations = gridSize * gridSize;
+            let historyLog = []; 
 
             while (iterations < maxIterations) {
                 iterations++;
@@ -556,10 +573,10 @@
                                 let nr = r + dr, nc = c + dc;
                                 if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && solverBoard[nr][nc] === 0) {
                                     solverBoard[nr][nc] = 1; 
+                                    historyLog.push({r: nr, c: nc, type: 1});
                                     progressMade = true;
                                 }
                             }
-
                             if (isDiagCat) {
                                 for (let d = 1; d < gridSize; d++) {
                                     let diagonals = [[d, d], [d, -d], [-d, d], [-d, -d]];
@@ -567,6 +584,7 @@
                                         let nr = r + dr, nc = c + dc;
                                         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && solverBoard[nr][nc] === 0) {
                                             solverBoard[nr][nc] = 1;
+                                            historyLog.push({r: nr, c: nc, type: 1});
                                             progressMade = true;
                                         }
                                     }
@@ -584,11 +602,15 @@
                     }
                     if (cats === 0 && open.length === 1) {
                         solverBoard[r][open[0]] = 2;
+                        historyLog.push({r: r, c: open[0], type: 2});
                         progressMade = true;
                         movesCount++;
                     }
                     if (cats === 1 && open.length > 0) {
-                        open.forEach(c => solverBoard[r][c] = 1);
+                        open.forEach(c => {
+                            solverBoard[r][c] = 1;
+                            historyLog.push({r: r, c: c, type: 1});
+                        });
                         progressMade = true;
                     }
                 }
@@ -601,11 +623,15 @@
                     }
                     if (cats === 0 && open.length === 1) {
                         solverBoard[open[0]][c] = 2;
+                        historyLog.push({r: open[0], c: c, type: 2});
                         progressMade = true;
                         movesCount++;
                     }
                     if (cats === 1 && open.length > 0) {
-                        open.forEach(r => solverBoard[r][c] = 1);
+                        open.forEach(r => {
+                            solverBoard[r][c] = 1;
+                            historyLog.push({r: r, c: c, type: 1});
+                        });
                         progressMade = true;
                     }
                 }
@@ -622,15 +648,18 @@
                     }
                     if (cats === 0 && open.length === 1) {
                         solverBoard[open[0].r][open[0].c] = 2;
+                        historyLog.push({r: open[0].r, c: open[0].c, type: 2});
                         progressMade = true;
                         movesCount++;
                     }
                     if (cats === 1 && open.length > 0) {
-                        open.forEach(cell => solverBoard[cell.r][cell.c] = 1);
+                        open.forEach(cell => {
+                            solverBoard[cell.r][cell.c] = 1;
+                            historyLog.push({r: cell.r, c: cell.c, type: 1});
+                        });
                         progressMade = true;
                     }
                 }
-
                 if (!progressMade) break; 
             }
 
@@ -640,11 +669,56 @@
                     if (solverBoard[r][c] === 2) catCount++;
                 }
             }
+            return { solvable: (catCount === gridSize), moves: movesCount, history: historyLog };
+        }
 
-            return {
-                solvable: (catCount === gridSize),
-                moves: movesCount
-            };
+        function triggerLogicalHint() {
+            if (gameOver || movesSinceLastHint < requiredMovesForHint) return;
+
+            let result = solveUsingLogicOnly(playerBoard);
+            let nextMoveClue = result.history.find(step => playerBoard[step.r][step.c] === 0);
+
+            if (!nextMoveClue) {
+                messageElement.textContent = "Check your marks! One of them broke the puzzle logic.";
+                messageElement.style.color = "orange";
+                return;
+            }
+
+            movesSinceLastHint = 0;
+            updateHintButtonState();
+
+            let targetCell = document.querySelector(`.cell[data-row='${nextMoveClue.r}'][data-col='${nextMoveClue.c}']`);
+            if (targetCell) {
+                let flashClass = (nextMoveClue.type === 2) ? 'hint-cat' : 'hint-x';
+                targetCell.classList.add(flashClass);
+                
+                messageElement.textContent = (nextMoveClue.type === 2) ? "Tip: A cat clearly fits here! 🐱" : "Tip: This spot can be ruled out! ✖";
+                messageElement.style.color = "var(--text-color)";
+
+                setTimeout(() => { targetCell.classList.remove(flashClass); }, 1650);
+            }
+        }
+
+        function incrementMoveCredit() {
+            if (movesSinceLastHint < requiredMovesForHint) {
+                movesSinceLastHint++;
+                updateHintButtonState();
+            }
+        }
+
+        function updateHintButtonState() {
+            if (gameOver) {
+                hintBtn.disabled = true;
+                hintBtn.textContent = "Hint";
+                return;
+            }
+            if (movesSinceLastHint >= requiredMovesForHint) {
+                hintBtn.disabled = false;
+                hintBtn.textContent = "Hint";
+            } else {
+                hintBtn.disabled = true;
+                hintBtn.textContent = `Hint (${requiredMovesForHint - movesSinceLastHint})`;
+            }
         }
 
         function renderBoard() {
@@ -652,10 +726,10 @@
             gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
             gridElement.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
 
-            let fontStyle = '1.3rem';
+            let fontStyle = '1.1rem';
             let markColor = 'rgba(74, 62, 61, 0.6)';
-            if (gridSize === 5) { fontStyle = '2.4rem'; }
-            else if (gridSize === 8) { fontStyle = '1.7rem'; }
+            if (gridSize === 5) fontStyle = '2.2rem';
+            else if (gridSize === 8) fontStyle = '1.5rem';
 
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
@@ -671,42 +745,55 @@
                     } else if (playerBoard[r][c] === 2) {
                         cell.textContent = emojiBoard[r][c] || '🐱';
                     }
-
                     gridElement.appendChild(cell);
                 }
             }
         }
 
-        function handleStart(targetElement, clientX, clientY) {
-            if (gameOver) return;
-            let cell = targetElement.closest('.cell');
+        function handleInteractionStart(e) {
+            if (gameOver || e.touches && e.touches.length > 1) return; // Ignore multi-finger gestures (pinching)
+            
+            let touch = e.touches ? e.touches[0] : e;
+            let cell = touch.target.closest('.cell');
             if (!cell) return;
             
             let r = parseInt(cell.dataset.row);
             let c = parseInt(cell.dataset.col);
-            let now = new Date().getTime();
 
-            if ((now - lastTapTime < 280) && (r === lastTapRow && c === lastTapCol)) {
-                isDragging = false;
+            longPressTriggered = false;
+            cancelLongPress();
+
+            longPressTimer = setTimeout(() => {
+                longPressTriggered = true;
+                if ('vibrate' in navigator) navigator.vibrate(40);
                 handleCatPlacement(r, c);
-                lastTapRow = -1;
-                lastTapCol = -1;
-            } else {
-                isDragging = true;
-                dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
-                lastTrackedCell = `${r},${c}`;
-                
-                lastTapRow = r;
-                lastTapCol = c;
-                
-                applyXMark(r, c);
-            }
-            lastTapTime = now;
+            }, LONG_PRESS_DURATION);
+
+            isDragging = true;
+            dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
+            lastTrackedCell = `${r},${c}`;
         }
 
-        function handleMove(clientX, clientY) {
-            if (!isDragging || gameOver) return;
-            let target = document.elementFromPoint(clientX, clientY);
+        function handleInteractionEnd(e) {
+            cancelLongPress();
+            if (gameOver || longPressTriggered || e.touches && e.touches.length > 0) return;
+
+            // Extract correct element target dependent on event dispatch context
+            let targetEl = e.changedTouches ? e.changedTouches[0].target : e.target;
+            let cell = targetEl.closest('.cell');
+            if (!cell) return;
+            
+            let r = parseInt(cell.dataset.row);
+            let c = parseInt(cell.dataset.col);
+
+            applyXMark(r, c);
+        }
+
+        function handleMoveDrag(e) {
+            if (!isDragging || gameOver || e.touches && e.touches.length > 1) return;
+            
+            let touch = e.touches ? e.touches[0] : e;
+            let target = document.elementFromPoint(touch.clientX, touch.clientY);
             if (!target) return;
             
             let cell = target.closest('.cell');
@@ -717,46 +804,29 @@
             let currentCellKey = `${r},${c}`;
 
             if (currentCellKey !== lastTrackedCell) {
+                cancelLongPress(); 
                 lastTrackedCell = currentCellKey;
                 applyXMark(r, c);
             }
         }
 
-        gridElement.addEventListener('touchstart', (e) => {
-            e.preventDefault(); 
-            if(e.touches.length > 0) {
-                handleStart(e.target, e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
+        gridElement.addEventListener('touchstart', handleInteractionStart, { passive: false });
+        gridElement.addEventListener('touchend', handleInteractionEnd, { passive: false });
+        gridElement.addEventListener('touchmove', handleMoveDrag, { passive: false });
 
-        gridElement.addEventListener('touchmove', (e) => {
-            e.preventDefault(); 
-            if(e.touches.length > 0) {
-                handleMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        gridElement.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            handleStart(e.target, e.clientX, e.clientY);
-        });
-
-        gridElement.addEventListener('mousemove', (e) => {
-            e.preventDefault();
-            handleMove(e.clientX, e.clientY);
-        });
+        gridElement.addEventListener('mousedown', handleInteractionStart);
+        gridElement.addEventListener('mouseup', handleInteractionEnd);
+        gridElement.addEventListener('mousemove', handleMoveDrag);
 
         window.addEventListener('click', (e) => {
-            const modal = document.getElementById('rulesModal');
-            if (e.target === modal) {
-                toggleModal(false);
-            }
+            if (e.target === document.getElementById('rulesModal')) toggleModal(false);
         });
 
         function applyXMark(r, c) {
             if (playerBoard[r][c] === 2) return; 
             if (playerBoard[r][c] !== dragTargetValue) {
                 playerBoard[r][c] = dragTargetValue;
+                incrementMoveCredit();
                 renderBoard();
             }
         }
@@ -765,16 +835,12 @@
             if (playerBoard[r][c] === 2) {
                 playerBoard[r][c] = 0;
                 emojiBoard[r][c] = '';
+                incrementMoveCredit();
             } else {
                 if (solution[r][c]) {
                     playerBoard[r][c] = 2;
-                    
-                    if (hasDiagonalCat && r === diagCatRow && c === diagCatCol) {
-                        emojiBoard[r][c] = '🐈';
-                    } else {
-                        emojiBoard[r][c] = catEmojis[Math.floor(Math.random() * catEmojis.length)];
-                    }
-                    
+                    emojiBoard[r][c] = (hasDiagonalCat && r === diagCatRow && c === diagCatCol) ? '🐈' : catEmojis[Math.floor(Math.random() * catEmojis.length)];
+                    incrementMoveCredit();
                     checkWin();
                 } else {
                     lives--;
@@ -784,9 +850,8 @@
                     if (lives <= 0) {
                         gameOver = true;
                         messageElement.textContent = "Game Over! 😿";
-                        if (reviveCount < maxRevives) {
-                            reviveBtn.style.display = 'inline-block';
-                        }
+                        updateHintButtonState();
+                        if (reviveCount < maxRevives) reviveBtn.style.display = 'inline-block';
                     }
                 }
             }
@@ -809,6 +874,7 @@
                 messageElement.textContent = "Purr-fect! Level Cleared! 🎉🐾";
                 messageElement.style.color = "green";
                 reviveBtn.style.display = 'none';
+                updateHintButtonState();
             }
         }
 
@@ -816,8 +882,8 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/MeowMeowFind/sw.js')
-                .then(() => console.log('Offline PWA active on GitHub Pages! 🐾'))
-                .catch(err => console.log('Service worker failed to register:', err));
+                .then(() => console.log('Offline PWA active! 🐾'))
+                .catch(err => console.log('Service worker error:', err));
         }
     </script>
 </body>
