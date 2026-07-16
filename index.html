@@ -100,16 +100,41 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
             contain: layout paint; 
         }
+
+        /* RESPONSIVE GRID LAYOUT FOR PORTRAIT VS LANDSCAPE */
         #grid {
             display: grid;
             gap: 2px;
-            width: 80vmin;
-            height: 80vmin;
-            max-width: 460px;
-            max-height: 460px;
             -webkit-user-select: none;
             touch-action: none;
+            width: 75vmin;
+            height: 75vmin;
         }
+
+        @media (orientation: portrait) {
+            #grid {
+                width: 82vw;
+                height: 82vw;
+                max-width: 440px;
+                max-height: 440px;
+            }
+            h1 { font-size: 1.8rem; }
+        }
+
+        @media (orientation: landscape) {
+            #grid {
+                width: 58vh;
+                height: 58vh;
+                max-width: 360px;
+                max-height: 360px;
+            }
+            body { padding: 5px; }
+            h1 { font-size: 1.4rem; }
+            .controls { margin-bottom: 4px; padding: 4px 10px; }
+            .actions-container { margin-top: 8px; }
+            .btn { padding: 8px 20px; font-size: 0.9rem; }
+        }
+
         .cell {
             background-color: white;
             display: flex;
@@ -288,7 +313,6 @@
         const reviveBtn = document.getElementById('reviveBtn');
         const bannerElement = document.getElementById('special-banner');
 
-        // Total control over document scroll/bounce
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -299,7 +323,6 @@
             }, { passive: true });
         });
 
-        // Safe end hooks
         const endDrag = () => { isDragging = false; lastTrackedCell = null; };
         window.addEventListener('mouseup', endDrag);
         window.addEventListener('touchend', endDrag);
@@ -654,9 +677,6 @@
             }
         }
 
-        /* PURE MOBILE TOUCH ENGINE 
-          Completely prevents double-tap zoom by using preventDefault on all touch starts/moves.
-        */
         function handleStart(targetElement, clientX, clientY) {
             if (gameOver) return;
             let cell = targetElement.closest('.cell');
@@ -702,7 +722,6 @@
             }
         }
 
-        // 1. Mobile Touch Listeners (Immediate preventDefault stops browser actions)
         gridElement.addEventListener('touchstart', (e) => {
             e.preventDefault(); 
             if(e.touches.length > 0) {
@@ -717,7 +736,6 @@
             }
         }, { passive: false });
 
-        // 2. Desktop Mouse Fallbacks
         gridElement.addEventListener('mousedown', (e) => {
             e.preventDefault();
             handleStart(e.target, e.clientX, e.clientY);
