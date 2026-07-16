@@ -18,7 +18,7 @@
             width: 100%;
             height: 100%;
             overscroll-behavior: none; 
-            -webkit-overflow-scrolling: auto;
+            -webkit-overflow-scrolling: none;
         }
         body {
             font-family: '-apple-system', BlinkMacSystemFont, sans-serif;
@@ -34,7 +34,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: manipulation; 
+            touch-action: none; 
         }
         
         .header-container {
@@ -108,7 +108,7 @@
             max-width: 460px;
             max-height: 460px;
             -webkit-user-select: none;
-            touch-action: manipulation;
+            touch-action: none;
         }
         .cell {
             background-color: white;
@@ -117,7 +117,7 @@
             justify-content: center;
             font-weight: bold;
             -webkit-user-select: none;
-            touch-action: manipulation; 
+            touch-action: none; 
             aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
@@ -281,7 +281,6 @@
         let lastTapRow = -1;
         let lastTapCol = -1;
         let lastTrackedCell = null;
-        let lastTouchTime = 0;
 
         const gridElement = document.getElementById('grid');
         const heartsElement = document.getElementById('hearts');
@@ -289,6 +288,7 @@
         const reviveBtn = document.getElementById('reviveBtn');
         const bannerElement = document.getElementById('special-banner');
 
+        // Total control over document scroll/bounce
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -299,8 +299,11 @@
             }, { passive: true });
         });
 
-        window.addEventListener('pointerup', () => { isDragging = false; lastTrackedCell = null; });
-        window.addEventListener('pointercancel', () => { isDragging = false; lastTrackedCell = null; });
+        // Safe end hooks
+        const endDrag = () => { isDragging = false; lastTrackedCell = null; };
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+        window.addEventListener('touchcancel', endDrag);
 
         function toggleModal(show) {
             document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
@@ -651,25 +654,12 @@
             }
         }
 
-        /* AGGRESSIVE GESTURE BLOCKERS FOR IOS SAFARI
-           Intercepts touch sequences before they hit native layout engine engines.
+        /* PURE MOBILE TOUCH ENGINE 
+          Completely prevents double-tap zoom by using preventDefault on all touch starts/moves.
         */
-        gridElement.addEventListener('touchstart', (e) => {
-            let now = new Date().getTime();
-            let timespan = now - lastTouchTime;
-            
-            if (timespan < 300 && timespan > 0) {
-                e.preventDefault(); 
-            }
-            lastTouchTime = now;
-        }, { passive: false });
-
-        gridElement.addEventListener('pointerdown', (e) => {
+        function handleStart(targetElement, clientX, clientY) {
             if (gameOver) return;
-            e.preventDefault();
-            e.stopPropagation();
-            
-            let cell = e.target.closest('.cell');
+            let cell = targetElement.closest('.cell');
             if (!cell) return;
             
             let r = parseInt(cell.dataset.row);
@@ -692,13 +682,11 @@
                 applyXMark(r, c);
             }
             lastTapTime = now;
-        });
+        }
 
-        gridElement.addEventListener('pointermove', (e) => {
+        function handleMove(clientX, clientY) {
             if (!isDragging || gameOver) return;
-            e.preventDefault();
-            
-            let target = document.elementFromPoint(e.clientX, e.clientY);
+            let target = document.elementFromPoint(clientX, clientY);
             if (!target) return;
             
             let cell = target.closest('.cell');
@@ -712,6 +700,32 @@
                 lastTrackedCell = currentCellKey;
                 applyXMark(r, c);
             }
+        }
+
+        // 1. Mobile Touch Listeners (Immediate preventDefault stops browser actions)
+        gridElement.addEventListener('touchstart', (e) => {
+            e.preventDefault(); 
+            if(e.touches.length > 0) {
+                handleStart(e.target, e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        gridElement.addEventListener('touchmove', (e) => {
+            e.preventDefault(); 
+            if(e.touches.length > 0) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        // 2. Desktop Mouse Fallbacks
+        gridElement.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            handleStart(e.target, e.clientX, e.clientY);
+        });
+
+        gridElement.addEventListener('mousemove', (e) => {
+            e.preventDefault();
+            handleMove(e.clientX, e.clientY);
         });
 
         window.addEventListener('click', (e) => {
