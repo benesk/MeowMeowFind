@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MeowMeowFind</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="/MeowMeowFind/icon-192.png">
@@ -100,12 +100,13 @@
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
             margin: 0 auto;
+            touch-action: none;
         }
 
         #grid {
             display: grid;
             gap: 2px;
-            touch-action: pan-x pan-y pinch-zoom; 
+            touch-action: none; 
         }
 
         @media (orientation: portrait) {
@@ -139,8 +140,9 @@
             min-width: 0;
             min-height: 0;
             overflow: hidden;
-            touch-action: manipulation; 
+            touch-action: none;
             transition: background-color 0.2s ease, transform 0.1s ease;
+            cursor: pointer;
         }
 
         .cell:active {
@@ -282,9 +284,9 @@
             <h2>Rules & Controls</h2>
             <ul>
                 <li><strong>Objective:</strong> Find exactly one hidden Cat in every row, column, and color territory!</li>
-                <li><strong>Single Tap:</strong> Tap any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. Drag smoothly to mass-clear zones.</li>
-                <li><strong>Long Press (Hold):</strong> Keep your finger pressed down on a cell for 350ms to drop or remove a <strong>Cat 🐱</strong>.</li>
-                <li><strong>iOS Zooming:</strong> Use two-finger screen pinches to scale up and pan the board freely. Double tapping has been safely disabled.</li>
+                <li><strong>Single Tap/Click:</strong> Tap or click any empty grid cell to immediately drop or clear an <strong>✖</strong> mark. Drag smoothly to mass-clear zones.</li>
+                <li><strong>Double Tap/Click:</strong> Double-tap or double-click a cell to drop or remove a <strong>Cat 🐱</strong>.</li>
+                <li><strong>Panning & Zooming:</strong> Panning and zooming are disabled on the game board for smooth, responsive gameplay.</li>
                 <li><strong>Recharging Hints:</strong> Hints require regular valid moves to charge back up. Easy requires 3 moves, Medium requires 7, and Hard requires 12!</li>
             </ul>
             <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
@@ -314,13 +316,14 @@
         let maxRevives = Infinity;
         let lastTrackedCell = null;
 
-        // Long Press and Swipe Separation Coordinates
-        let longPressTimer = null;
-        let longPressTriggered = false;
+        // Double-click and Swipe Separation Coordinates
         let startX = 0;
         let startY = 0;
-        const SWIPE_THRESHOLD = 8; // Pixel radius allowed before discarding long-press
-        const LONG_PRESS_DURATION = 350; 
+        const SWIPE_THRESHOLD = 8; // Pixel radius allowed before canceling double-click
+        
+        let clickCount = 0;
+        let clickTimer = null;
+        const DOUBLE_CLICK_THRESHOLD = 300; // Time window for double-click (ms)
 
         let movesSinceLastHint = 0; 
         let requiredMovesForHint = 3;
@@ -332,9 +335,17 @@
         const hintBtn = document.getElementById('hintBtn');
         const bannerElement = document.getElementById('special-banner');
 
-        document.body.addEventListener('touchmove', function(e) {
-            if (e.touches && e.touches.length > 1) return; 
-            if (isDragging) e.preventDefault();
+        // Prevent default touch behaviors on grid
+        document.addEventListener('touchmove', function(e) {
+            let target = e.target;
+            if (target.closest('#grid-container') || target.closest('#grid') || target.closest('.cell')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Disable pinch zoom on iOS
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
         }, { passive: false });
 
         document.querySelectorAll('select, button, .modal-content').forEach(element => {
@@ -343,17 +354,9 @@
             }, { passive: true });
         });
 
-        const cancelLongPress = () => {
-            if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            }
-        };
-
         const endDrag = () => { 
             isDragging = false; 
             lastTrackedCell = null; 
-            cancelLongPress();
         };
 
         window.addEventListener('pointerup', endDrag);
@@ -764,20 +767,11 @@
             let r = parseInt(cell.dataset.row);
             let c = parseInt(cell.dataset.col);
 
-            longPressTriggered = false;
-            cancelLongPress();
-
             // Store spatial anchors for drag detection
             startX = e.clientX;
             startY = e.clientY;
 
-            longPressTimer = setTimeout(() => {
-                longPressTriggered = true;
-                if ('vibrate' in navigator) navigator.vibrate(40);
-                handleCatPlacement(r, c);
-            }, LONG_PRESS_DURATION);
-
-            // Paint the starting tile immediately on tap down
+            // Initialize drag for X marks
             isDragging = true;
             dragTargetValue = playerBoard[r][c] === 1 ? 0 : 1;
             lastTrackedCell = `${r},${c}`;
@@ -785,7 +779,6 @@
         }
 
         function handleInteractionEnd(e) {
-            cancelLongPress();
             isDragging = false;
             lastTrackedCell = null;
         }
@@ -797,9 +790,9 @@
             let deltaX = Math.abs(e.clientX - startX);
             let deltaY = Math.abs(e.clientY - startY);
             
-            // Cancel long press immediately if user moves their finger outside the threshold
+            // If movement detected, allow drag to continue for X marks
             if (deltaX > SWIPE_THRESHOLD || deltaY > SWIPE_THRESHOLD) {
-                cancelLongPress();
+                // Movement is fine, continue dragging
             }
 
             let target = document.elementFromPoint(e.clientX, e.clientY);
@@ -818,9 +811,34 @@
             }
         }
 
+        function handleCellClick(e) {
+            if (gameOver || !e.isPrimary) return;
+            
+            let cell = e.target.closest('.cell');
+            if (!cell) return;
+            
+            let r = parseInt(cell.dataset.row);
+            let c = parseInt(cell.dataset.col);
+
+            clickCount++;
+            
+            if (clickCount === 1) {
+                // First click - start the timer
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, DOUBLE_CLICK_THRESHOLD);
+            } else if (clickCount === 2) {
+                // Double-click detected
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                handleCatPlacement(r, c);
+            }
+        }
+
         gridElement.addEventListener('pointerdown', handleInteractionStart);
         gridElement.addEventListener('pointerup', handleInteractionEnd);
         gridElement.addEventListener('pointermove', handleMoveDrag);
+        gridElement.addEventListener('click', handleCellClick);
 
         window.addEventListener('click', (e) => {
             if (e.target === document.getElementById('rulesModal')) toggleModal(false);
