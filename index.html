@@ -79,10 +79,10 @@
         }
         .stats {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             margin-bottom: 8px;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             align-items: center;
         }
         #special-banner {
@@ -266,7 +266,7 @@
         </div>
 
         <div id="special-banner"></div>
-        <div class="stats"><div id="hearts">❤️❤️❤️</div></div>
+        <div class="stats"><div id="hearts">❤️❤️❤️</div><div id="score" style="font-size:1rem; color:var(--text-color);">Score: 0</div><div id="timer" style="font-size:0.95rem; color:var(--text-color);">00:00</div></div>
 
         <div id="grid-container"><div id="grid"></div></div>
 
@@ -288,6 +288,7 @@
                 <li><strong>Double Tap/Click:</strong> Double-tap or double-click a cell to drop or remove a <strong>Cat 🐱</strong>.</li>
                 <li><strong>Panning & Zooming:</strong> Panning and zooming are disabled on the game board for smooth, responsive gameplay.</li>
                 <li><strong>Recharging Hints:</strong> Hints require regular valid moves to charge back up. Easy requires 3 moves, Medium requires 7, and Hard requires 12!</li>
+                <li><strong>Diagonal Cats:</strong> Some boards may include a special diagonal cat (🐈). It behaves like a normal cat for row/column/territory rules but additionally rules out cells along diagonals as shown — treat it like any other cat when solving.</li>
             </ul>
             <button class="close-modal-btn" onclick="toggleModal(false)">Got it!</button>
         </div>
@@ -335,6 +336,19 @@
         const hintBtn = document.getElementById('hintBtn');
         const bannerElement = document.getElementById('special-banner');
 
+        // Scoring & Timer
+        let score = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let hintsUsed = 0;
+
+        // scoring tunables
+        const POINTS_CORRECT = 100;
+        const POINTS_WRONG = -50;
+        const POINTS_PER_LIFE = 10;
+        const POINTS_PER_HINT = -20;
+        const MAX_TIME_BONUS = 100; // seconds -> bonus formula clamp
+
         // Prevent default touch behaviors on grid
         document.addEventListener('touchmove', function(e) {
             let target = e.target;
@@ -366,6 +380,71 @@
             document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
         }
 
+        function updateScoreDisplay() {
+            const scoreEl = document.getElementById('score');
+            if (scoreEl) scoreEl.textContent = `Score: ${Math.max(0, Math.round(score))}`;
+        }
+
+        function formatTime(seconds) {
+            const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const ss = String(Math.floor(seconds % 60)).padStart(2, '0');
+            return `${mm}:${ss}`;
+        }
+
+        function startTimer() {
+            stopTimer();
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').textContent = formatTime(elapsed);
+            }, 500);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function highScoreKey(size, diff) {
+            return `MeowMeowFind_highscore_v1:${size}x${size}:${diff}`;
+        }
+
+        function saveHighScoreIfBeaten(size, diff, value) {
+            try {
+                const key = highScoreKey(size, diff);
+                const prev = parseInt(localStorage.getItem(key) || '0', 10);
+                if (value > prev) {
+                    localStorage.setItem(key, String(value));
+                    return true;
+                }
+            } catch (e) { /* ignore storage errors */ }
+            return false;
+        }
+
+        function getHighScore(size, diff) {
+            try {
+                return parseInt(localStorage.getItem(highScoreKey(size, diff)) || '0', 10);
+            } catch (e) { return 0; }
+        }
+
+        function onCorrectPlacement() {
+            score += POINTS_CORRECT;
+            updateScoreDisplay();
+        }
+
+        function onWrongPlacement() {
+            score += POINTS_WRONG;
+            updateScoreDisplay();
+        }
+
+        function onUsedHint() {
+            hintsUsed++;
+            score += POINTS_PER_HINT;
+            updateScoreDisplay();
+        }
+
         function startNewGame() {
             gridSize = parseInt(document.getElementById('sizeSelect').value);
             const diff = document.getElementById('diffSelect').value;
@@ -389,11 +468,18 @@
             gameOver = false;
             movesSinceLastHint = requiredMovesForHint; 
             
+            // reset UI and score/timer
             reviveBtn.style.display = 'none'; 
             updateHearts();
             updateHintButtonState();
             messageElement.textContent = "";
             bannerElement.textContent = "";
+
+            score = 0;
+            hintsUsed = 0;
+            updateScoreDisplay();
+            document.getElementById('timer').textContent = '00:00';
+            startTimer();
 
             hasDiagonalCat = Math.random() < 0.10;
             diagCatRow = -1;
@@ -463,15 +549,13 @@
             generateCandidatePuzzle();
         }
 
+        // Replacement generateCandidatePuzzle() with more randomized territory shapes/sizes
         function generateCandidatePuzzle() {
             solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-            let positions = Array(gridSize).fill(-1); 
+            let positions = Array(gridSize).fill(-1);
+
             let localDiagRow = hasDiagonalCat ? Math.floor(Math.random() * gridSize) : -1;
             diagCatRow = localDiagRow;
-
-            if (hasDiagonalCat) {
-                bannerElement.textContent = "🐈 ALERT: A diagonal cat (🐈) is hiding on this board!";
-            }
 
             function isSafe(row, col) {
                 for (let r = 0; r < row; r++) {
@@ -490,83 +574,146 @@
                 return true;
             }
 
-            function solve(row) {
+            function placeCats(row) {
                 if (row === gridSize) return true;
                 let cols = Array.from({length: gridSize}, (_, i) => i).sort(() => Math.random() - 0.5);
                 for (let col of cols) {
                     if (isSafe(row, col)) {
                         positions[row] = col;
-                        if (solve(row + 1)) return true;
+                        if (placeCats(row + 1)) return true;
                         positions[row] = -1;
                     }
                 }
                 return false;
             }
-            solve(0);
-            
+            placeCats(0);
+
             if (hasDiagonalCat) diagCatCol = positions[localDiagRow];
             positions.forEach((col, row) => { solution[row][col] = true; });
 
-            // IMPROVED: Constrain color territories to be near their cat
+            // Initialize boardLayout unassigned
             boardLayout = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1));
-            
-            // Seed each color from its cat position
-            let seeds = positions.map((col, row) => ({r: row, c: col, color: row}));
-            
-            // Mark cat positions immediately
-            positions.forEach((col, row) => {
-                boardLayout[row][col] = row;
+
+            // Base avg territory size and small variance
+            const totalCells = gridSize * gridSize;
+            const baseTerritory = Math.max(1, Math.floor(totalCells / gridSize)); // ~gridSize
+            const SHAPE_PROB_ROW = 0.12;    // chance territory is single-row-ish
+            const SHAPE_PROB_COL = 0.12;    // chance territory is single-col-ish
+            const SHAPE_PROB_SINGLE = 0.06; // chance territory is only the cat cell
+            const REMOTE_SEED_PROB = 0.10;  // chance to add one remote seed to elongate
+
+            // Build per-color properties (one color per row/cat)
+            let colorProps = positions.map((col, row) => {
+                let seedChoice = {r: row, c: col};
+                let shape = 'blob';
+                let p = Math.random();
+                if (p < SHAPE_PROB_SINGLE) shape = 'single';
+                else if (p < SHAPE_PROB_SINGLE + SHAPE_PROB_ROW) shape = 'row';
+                else if (p < SHAPE_PROB_SINGLE + SHAPE_PROB_ROW + SHAPE_PROB_COL) shape = 'col';
+
+                let sizeVariance = Math.max(1, Math.round(baseTerritory * (0.5 + Math.random() * 1.5))); // 0.5x–2.0x
+                if (shape === 'single') sizeVariance = 1;
+                return { color: row, catRow: row, catCol: col, seed: seedChoice, shape, targetSize: sizeVariance };
             });
-            
-            // BFS from each cat with SIZE LIMITS to create naturally-sized territories
-            const targetTerritorySize = Math.floor((gridSize * gridSize) / gridSize);
-            let queues = seeds.map(s => [s]);
-            
-            let activeColorBands = seeds.length;
-            while (activeColorBands > 0) {
-                activeColorBands = 0;
-                for (let colorIdx = 0; colorIdx < gridSize; colorIdx++) {
-                    let q = queues[colorIdx];
-                    if (q.length === 0) continue;
-                    
+
+            // Ensure each cat cell is owned by its color and mark them first
+            colorProps.forEach((p) => {
+                boardLayout[p.catRow][p.catCol] = p.color;
+            });
+
+            // Build queues seeded from each territory's seed; optionally add a remote seed to elongate territory
+            let queues = colorProps.map((p) => {
+                let q = [];
+                q.push({r: p.catRow, c: p.catCol});
+                if (Math.random() < REMOTE_SEED_PROB && p.shape === 'blob') {
+                    let tries = 0;
+                    while (tries < 50) {
+                        tries++;
+                        let rr = Math.floor(Math.random() * gridSize);
+                        let cc = Math.floor(Math.random() * gridSize);
+                        let dist = Math.abs(rr - p.catRow) + Math.abs(cc - p.catCol);
+                        if (boardLayout[rr][cc] === -1 && dist >= Math.floor(gridSize/2)) {
+                            boardLayout[rr][cc] = p.color;
+                            q.push({r: rr, c: cc});
+                            break;
+                        }
+                    }
+                }
+                return q;
+            });
+
+            // Expand territories with awareness of shape and target sizes
+            let active = true;
+            let attempts = 0;
+            while (active && attempts < gridSize * gridSize * 4) {
+                attempts++;
+                active = false;
+                for (let idx = 0; idx < colorProps.length; idx++) {
+                    let props = colorProps[idx];
+                    let q = queues[idx];
+                    if (!q || q.length === 0) continue;
+
                     // Count current territory size
                     let territorySize = 0;
                     for (let r = 0; r < gridSize; r++) {
                         for (let c = 0; c < gridSize; c++) {
-                            if (boardLayout[r][c] === colorIdx) territorySize++;
+                            if (boardLayout[r][c] === props.color) territorySize++;
                         }
                     }
-                    
-                    // Stop growing this territory if it's reached target size
-                    if (territorySize >= targetTerritorySize) {
-                        queues[colorIdx] = [];
+                    if (territorySize >= props.targetSize) {
+                        queues[idx] = [];
                         continue;
                     }
-                    
-                    activeColorBands++;
-                    let randIndex = Math.floor(Math.random() * q.length);
-                    let cell = q.splice(randIndex, 1)[0];
-                    
-                    let directions = [[-1,0], [1,0], [0,-1], [0,1]].sort(() => Math.random() - 0.5);
+
+                    active = true;
+                    // Pick a random front cell to expand
+                    let qi = Math.floor(Math.random() * q.length);
+                    let cell = q.splice(qi, 1)[0];
+
+                    // Determine allowed directions by shape
+                    let directions;
+                    if (props.shape === 'row') {
+                        directions = [[0,-1],[0,1]]; // left/right only
+                    } else if (props.shape === 'col') {
+                        directions = [[-1,0],[1,0]]; // up/down only
+                    } else {
+                        directions = [[-1,0],[1,0],[0,-1],[0,1]];
+                    }
+                    // Shuffle directions and try to add neighbors
+                    directions = directions.sort(() => Math.random() - 0.5);
+
                     for (let [dr, dc] of directions) {
                         let nr = cell.r + dr, nc = cell.c + dc;
                         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && boardLayout[nr][nc] === -1) {
-                            boardLayout[nr][nc] = colorIdx;
-                            let newCell = {r: nr, c: nc, color: colorIdx};
-                            q.push(newCell);
+                            boardLayout[nr][nc] = props.color;
+                            q.push({r: nr, c: nc});
+                            // small chance to push another neighbor right away to elongate shape
+                            if (Math.random() < 0.25) {
+                                let extraDirs = directions.sort(() => Math.random() - 0.5);
+                                for (let [er, ec] of extraDirs) {
+                                    let xr = nr + er, xc = nc + ec;
+                                    if (xr >= 0 && xr < gridSize && xc >= 0 && xc < gridSize && boardLayout[xr][xc] === -1) {
+                                        boardLayout[xr][xc] = props.color;
+                                        q.push({r: xr, c: xc});
+                                        break;
+                                    }
+                                }
+                            }
+                            break; // only expand one neighbor per iteration for this front cell
                         }
                     }
+                    queues[idx] = q;
                 }
             }
 
-            // Fill any remaining unassigned cells
+            // Fill remaining unassigned cells by snapping them to adjacent territories (as before)
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
                     if (boardLayout[r][c] === -1) {
                         let adjacent = [[-1,0],[1,0],[0,-1],[0,1]]
                             .map(([dr,dc]) => (boardLayout[r+dr] || [])[c+dc])
                             .filter(v => v !== undefined && v !== -1);
-                        boardLayout[r][c] = adjacent.length > 0 ? adjacent[0] : 0;
+                        boardLayout[r][c] = adjacent.length > 0 ? adjacent[Math.floor(Math.random() * adjacent.length)] : 0;
                     }
                 }
             }
@@ -720,6 +867,9 @@
 
             movesSinceLastHint = 0;
             updateHintButtonState();
+
+            // register hint usage / penalty
+            onUsedHint();
 
             let targetCell = document.querySelector(`.cell[data-row='${nextMoveClue.r}'][data-col='${nextMoveClue.c}']`);
             if (targetCell) {
@@ -889,16 +1039,19 @@
                     playerBoard[r][c] = 2;
                     emojiBoard[r][c] = (hasDiagonalCat && r === diagCatRow && c === diagCatCol) ? '🐈' : catEmojis[Math.floor(Math.random() * catEmojis.length)];
                     incrementMoveCredit();
+                    onCorrectPlacement();
                     checkWin();
                 } else {
                     lives--;
                     updateHearts();
+                    onWrongPlacement();
                     messageElement.textContent = "Oops! Not there. 🐾";
                     messageElement.style.color = "red";
                     if (lives <= 0) {
                         gameOver = true;
                         messageElement.textContent = "Game Over! 😿";
                         updateHintButtonState();
+                        stopTimer();
                         if (reviveCount < maxRevives) reviveBtn.style.display = 'inline-block';
                     }
                 }
@@ -919,7 +1072,19 @@
             }
             if (catCount === gridSize) {
                 gameOver = true;
-                messageElement.textContent = "Purr-fect! Level Cleared! 🎉🐾";
+                stopTimer();
+
+                // compute time bonus
+                let seconds = Math.floor((Date.now() - startTime) / 1000);
+                let timeBonus = Math.max(0, MAX_TIME_BONUS - seconds); // shorter time => higher bonus
+                // life bonus
+                let lifeBonus = Math.max(0, lives) * POINTS_PER_LIFE;
+
+                score += timeBonus + lifeBonus;
+                updateScoreDisplay();
+
+                let isHigh = saveHighScoreIfBeaten(gridSize, document.getElementById('diffSelect').value, Math.round(score));
+                messageElement.textContent = `Purr-fect! Level Cleared! 🎉🐾 Score: ${Math.round(score)}${isHigh ? ' — New High Score! 🏆' : ''}`;
                 messageElement.style.color = "green";
                 reviveBtn.style.display = 'none';
                 updateHintButtonState();
